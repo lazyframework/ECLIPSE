@@ -40,8 +40,9 @@ public static class MainMenuLayoutBuilder
         var scaler = canvasGO.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920, 1080);
-        scaler.matchWidthOrHeight = 0.5f; // Kunci rasio tengah
+        scaler.matchWidthOrHeight = 0.5f; // Kunci aspek rasio agar responsif di semua layar
 
+        // Pengecekan EventSystem
 #if UNITY_2023_1_OR_NEWER
         bool hasES = Object.FindFirstObjectByType<EventSystem>() != null;
 #else
@@ -57,26 +58,28 @@ public static class MainMenuLayoutBuilder
 
         // ==================== BACKGROUND DARI ASSETS/ART ====================
         var bg = Img(root, "Background_Art", new Color(0.01f, 0.02f, 0.06f, 1f));
-        Stretch(bg.rectTransform); // Full screen di semua rasio
+        Stretch(bg.rectTransform);
 
-        // Mencoba memuat gambar otomatis dari folder Assets/Art
-        Sprite bgSprite = LoadBackgroundSprite();
+        // Memuat gambar secara spesifik
+        Sprite bgSprite = LoadBackgroundSprite("Assets/Art/a-eclipse.png");
+        
         if (bgSprite != null)
         {
             bg.sprite = bgSprite;
             bg.color = Color.white;
             bg.type = Image.Type.Simple;
-            bg.preserveAspect = false; // Biarkan stretch mengisi layar
+            bg.preserveAspect = false; // Memastikan gambar menutupi seluruh layar tanpa peduli rasio
         }
         else
         {
-            Debug.LogWarning("Gambar background tidak ditemukan di Assets/Art. Menggunakan warna solid gelap.");
+            Debug.LogWarning("Gagal memuat gambar. Pastikan file 'a-eclipse.png' ada di Assets/Art/");
         }
 
-        // Overlay gelap agar UI di atasnya lebih terbaca
+        // Overlay gelap agar teks tetap terbaca
         var overlay = Img(root, "Overlay", new Color(0, 0, 0, 0.3f));
         Stretch(overlay.rectTransform);
 
+        // ==================== BUILD ELEMEN UI ====================
         BuildFrameLines(root);
         BuildProfile(root);
         BuildTopRight(root);
@@ -86,26 +89,29 @@ public static class MainMenuLayoutBuilder
               TextAlignmentOptions.Left, new Vector2(0, 0), new Vector2(46, 20), new Vector2(400, 22));
 
         Selection.activeGameObject = canvasGO;
-        Debug.Log("Main menu layout selesai. Cek folder Assets/Art untuk background.");
+        Debug.Log("✅ Main menu layout selesai dibuat!");
     }
 
-    // Fungsi untuk mencari gambar di Assets/Art
-    static Sprite LoadBackgroundSprite()
+    // Fungsi memuat Sprite & mengubah Texture Type secara otomatis
+    static Sprite LoadBackgroundSprite(string path)
     {
-        string artPath = "Assets/Art";
-        if (!AssetDatabase.IsValidFolder(artPath)) return null;
-
-        // Mencari semua gambar di folder Art
-        string[] guids = AssetDatabase.FindAssets("t:Texture2D", new[] { artPath });
-        if (guids.Length == 0) return null;
-
-        // Ambil gambar pertama yang ditemukan sebagai background
-        string path = AssetDatabase.GUIDToAssetPath(guids[0]);
-        TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
-        if (importer != null && importer.textureType != TextureImporterType.Sprite)
+        if (!File.Exists(path))
         {
-            importer.textureType = TextureImporterType.Sprite;
-            importer.SaveAndReimport();
+            Debug.LogError($"File tidak ditemukan di path: {path}");
+            return null;
+        }
+
+        TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+        if (importer != null)
+        {
+            // Ubah otomatis menjadi Sprite jika belum
+            if (importer.textureType != TextureImporterType.Sprite)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.SaveAndReimport(); 
+                Debug.Log($"✅ Tipe tekstur {path} berhasil diubah menjadi Sprite otomatis.");
+            }
         }
 
         return AssetDatabase.LoadAssetAtPath<Sprite>(path);
@@ -122,11 +128,9 @@ public static class MainMenuLayoutBuilder
 
     static void FrameLine(Transform root, string name, Vector2 anchor, float y)
     {
-        // Garis tipis di tengah
         var line = Img(root, name, Line);
         Place(line.rectTransform, anchor, new Vector2(0, y), new Vector2(1780, 1));
         
-        // Ujung garis (Ticks)
         for (int i = 0; i < 2; i++)
         {
             float x = i == 0 ? -890f : 890f;
@@ -167,11 +171,10 @@ public static class MainMenuLayoutBuilder
     }
 
     // =====================================================================
-    //  STATUS KANAN ATAS (RESPONSIVE)
+    //  STATUS KANAN ATAS
     // =====================================================================
     static void BuildTopRight(Transform root)
     {
-        // Pakai HorizontalLayoutGroup, tapi elemennya diberi LayoutElement agar tidak melar
         var g = Group(root, "TopRight", true, 8, TextAnchor.MiddleRight);
         Place(g, new Vector2(1, 1), new Vector2(-50, -50), new Vector2(700, 48));
 
@@ -186,7 +189,7 @@ public static class MainMenuLayoutBuilder
     {
         var rt = Shape(parent, name, new Vector2(width, 48), PanelFill, BorderThin, 0, 0, false, 1f);
         
-        // Mencegah kotak melar
+        // Kunci ukuran agar tidak melar
         var le = rt.gameObject.AddComponent<LayoutElement>();
         le.preferredWidth = width;
         le.preferredHeight = 48;
@@ -231,7 +234,7 @@ public static class MainMenuLayoutBuilder
     }
 
     // =====================================================================
-    //  TOMBOL BAWAH (RESPONSIVE)
+    //  TOMBOL BAWAH
     // =====================================================================
     static void BuildBottomMenu(Transform root)
     {
@@ -251,7 +254,6 @@ public static class MainMenuLayoutBuilder
         var b = Shape(parent, name, new Vector2(width, 64),
                       primary ? StartFill : BtnFill, primary ? StartBorder : BtnBorder, 18, 18, true, primary ? 0f : 1.5f);
         
-        // Kunci ukuran agar tidak melar saat layar lebar
         var le = b.gameObject.AddComponent<LayoutElement>();
         le.preferredWidth = width;
         le.preferredHeight = 64;
