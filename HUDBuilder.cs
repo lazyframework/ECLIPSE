@@ -241,7 +241,7 @@ public static class HUDBuilder
     //  WIDGET HELPERS
     // =====================================================================
     static void Pill(string name, RectTransform p, float rightX, float width, Color iconCol, string value,
-                     out TextMeshProUGUI txt, out Button plus)
+                     out TMP_Text txt, out Button plus)
     {
         var rt = Fixed(name, p, TR, TR, new Vector2(rightX, -34), new Vector2(width, 46));
         Img(rt, sRound, Dark);
@@ -257,7 +257,7 @@ public static class HUDBuilder
     }
 
     static RectTransform Slot(string name, RectTransform p, float x, Vector2 size, string weaponName,
-                              out TextMeshProUGUI ammo, TextAlignmentOptions ammoAlign, Vector2 ammoPos, float ammoSize,
+                              out TMP_Text ammo, TextAlignmentOptions ammoAlign, Vector2 ammoPos, float ammoSize,
                               out Image bg, out Outline outline)
     {
         var rt = Fixed(name, p, BC, BL, new Vector2(x, 105), size);
