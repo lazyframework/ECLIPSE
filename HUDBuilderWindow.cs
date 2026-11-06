@@ -8,435 +8,407 @@ public class HUDBuilderWindow : EditorWindow
 {
     private Canvas targetCanvas;
     private bool clearExisting = true;
-    private TMP_FontAsset fontRegular;
-    private TMP_FontAsset fontBold;
+    private TMP_FontAsset font;
 
-    // Colors
-    private Color primaryBlue = new Color(0.15f, 0.55f, 0.95f);
-    private Color accentCyan = new Color(0.2f, 0.85f, 1f);
-    private Color darkPanel = new Color(0.08f, 0.12f, 0.18f, 0.85f);
-    private Color hpGreen = new Color(0.2f, 0.9f, 0.4f);
-    private Color armorBlue = new Color(0.3f, 0.6f, 1f);
+    // Warna yang lebih dekat dengan gambar
+    private readonly Color panelDark = new Color(0.07f, 0.11f, 0.17f, 0.92f);
+    private readonly Color blueAccent = new Color(0.22f, 0.55f, 0.95f);
+    private readonly Color cyan = new Color(0.25f, 0.85f, 1f);
+    private readonly Color gold = new Color(1f, 0.82f, 0.25f);
+    private readonly Color hpGreen = new Color(0.25f, 0.95f, 0.45f);
+    private readonly Color armorBlue = new Color(0.35f, 0.65f, 1f);
 
-    [MenuItem("Tools/HUD Builder")]
-    public static void ShowWindow()
-    {
-        GetWindow<HUDBuilderWindow>("HUD Builder");
-    }
+    [MenuItem("Tools/HUD Builder (Accurate)")]
+    public static void Open() => GetWindow<HUDBuilderWindow>("HUD Builder");
 
     void OnGUI()
     {
-        GUILayout.Label("FPS HUD Builder", EditorStyles.boldLabel);
-        EditorGUILayout.Space(8);
-
+        GUILayout.Space(8);
         targetCanvas = (Canvas)EditorGUILayout.ObjectField("Target Canvas", targetCanvas, typeof(Canvas), true);
-        clearExisting = EditorGUILayout.Toggle("Clear Existing Children", clearExisting);
+        clearExisting = EditorGUILayout.Toggle("Clear Existing", clearExisting);
+        font = (TMP_FontAsset)EditorGUILayout.ObjectField("TMP Font", font, typeof(TMP_FontAsset), false);
 
-        EditorGUILayout.Space(6);
-        fontRegular = (TMP_FontAsset)EditorGUILayout.ObjectField("Font Regular", fontRegular, typeof(TMP_FontAsset), false);
-        fontBold = (TMP_FontAsset)EditorGUILayout.ObjectField("Font Bold", fontBold, typeof(TMP_FontAsset), false);
-
-        EditorGUILayout.Space(15);
-
-        GUI.backgroundColor = new Color(0.3f, 0.8f, 0.4f);
-        if (GUILayout.Button("Build HUD", GUILayout.Height(40)))
+        GUILayout.Space(12);
+        GUI.backgroundColor = new Color(0.2f, 0.75f, 0.4f);
+        if (GUILayout.Button("BUILD HUD (Mirip Gambar)", GUILayout.Height(42)))
         {
             if (targetCanvas == null)
             {
                 EditorUtility.DisplayDialog("Error", "Pilih Canvas dulu!", "OK");
                 return;
             }
-            BuildHUD();
+            Build();
         }
         GUI.backgroundColor = Color.white;
 
-        EditorGUILayout.Space(10);
-        EditorGUILayout.HelpBox("Hasil HUD akan dibuat sebagai child dari Canvas yang dipilih.\nGunakan Tools → HUD Builder untuk membuka window ini.", MessageType.Info);
+        EditorGUILayout.HelpBox("Hasil akan mirip screenshot. Gunakan Canvas Scaler: Scale With Screen Size 1920x1080", MessageType.Info);
     }
 
-    void BuildHUD()
+    void Build()
     {
         if (clearExisting)
         {
-            for (int i = targetCanvas.transform.childCount - 1; i >= 0; i--)
-            {
-                Undo.DestroyObjectImmediate(targetCanvas.transform.GetChild(i).gameObject);
-            }
+            while (targetCanvas.transform.childCount > 0)
+                Undo.DestroyObjectImmediate(targetCanvas.transform.GetChild(0).gameObject);
         }
 
-        // ========== BUILD SEMUA ELEMEN ==========
-        BuildTopLeftPlayerInfo();
-        BuildMissionPanel();
+        BuildPlayerInfo();
+        BuildMission();
         BuildCompass();
-        BuildTopRightResources();
+        BuildTopRight();
         BuildMinimap();
         BuildTimer();
-        BuildLeftJoystickArea();
-        BuildRightActionButtons();
-        BuildBottomWeaponBar();
-        BuildHPArmorBar();
+        BuildLeftControls();
+        BuildRightControls();
+        BuildBottomBar();
+        BuildHPArmor();
 
-        // Tambahkan component referensi
-        var refs = targetCanvas.GetComponent<HUDReferences>();
-        if (refs == null)
-            refs = Undo.AddComponent<HUDReferences>(targetCanvas.gameObject);
-
-        EditorUtility.SetDirty(targetCanvas.gameObject);
-        Debug.Log("<color=cyan>[HUD Builder]</color> Selesai membangun HUD!");
+        EditorUtility.SetDirty(targetCanvas);
+        Debug.Log("<color=#4af>[HUD Builder]</color> Selesai - mirip gambar!");
     }
 
-    // ==================== TOP LEFT ====================
-    void BuildTopLeftPlayerInfo()
+    // ====================== TOP LEFT - PLAYER ======================
+    void BuildPlayerInfo()
     {
-        var root = CreatePanel("PlayerInfo", targetCanvas.transform, new Vector2(20, -20), new Vector2(320, 90), TextAnchor.UpperLeft);
+        var root = Panel("PlayerInfo", targetCanvas.transform, Anchor.TopLeft, new Vector2(18, -18), new Vector2(310, 88));
 
-        // Portrait
-        var portrait = CreateImage("Portrait", root.transform, new Vector2(8, -8), new Vector2(74, 74));
-        portrait.color = new Color(0.2f, 0.25f, 0.3f);
-        AddOutline(portrait.gameObject, primaryBlue, 2f);
+        // Portrait frame
+        var portrait = Img("Portrait", root, new Vector2(10, -10), new Vector2(68, 68));
+        portrait.color = new Color(0.18f, 0.22f, 0.28f);
+        Outline(portrait.gameObject, blueAccent, 2.2f);
 
-        // Rank badge
-        var rankBadge = CreateImage("RankBadge", portrait.transform, new Vector2(2, 2), new Vector2(22, 22));
-        rankBadge.color = new Color(0.7f, 0.75f, 0.8f);
+        // Rank badge kecil di pojok kiri bawah portrait
+        var badge = Img("RankBadge", portrait.transform, new Vector2(3, 3), new Vector2(20, 20));
+        badge.color = new Color(0.65f, 0.7f, 0.78f);
 
-        // Name
-        var nameText = CreateText("PlayerName", root.transform, new Vector2(95, -12), new Vector2(200, 28), "FamaLine", 20, TextAlignmentOptions.Left);
-        nameText.fontStyle = FontStyles.Bold;
-
+        // Nama
+        var name = Txt("Name", root, new Vector2(90, -11), new Vector2(200, 26), "FamaLine", 19, FontStyles.Bold);
+        
         // Level
-        CreateText("LevelText", root.transform, new Vector2(95, -38), new Vector2(80, 22), "Lv. 12", 16, TextAlignmentOptions.Left);
+        Txt("Level", root, new Vector2(90, -36), new Vector2(70, 20), "Lv. 12", 15);
 
-        // XP Bar
-        var xpBg = CreateImage("XPBarBG", root.transform, new Vector2(170, -40), new Vector2(130, 12));
-        xpBg.color = new Color(0.15f, 0.2f, 0.25f);
+        // XP bar
+        var xpBg = Img("XPBG", root, new Vector2(160, -38), new Vector2(135, 11));
+        xpBg.color = new Color(0.12f, 0.16f, 0.22f);
+        var xpFill = Img("XPFill", xpBg.transform, Vector2.zero, Vector2.zero);
+        xpFill.color = blueAccent;
+        Stretch(xpFill, 0.36f); // 720/2000
 
-        var xpFill = CreateImage("XPFill", xpBg.transform, Vector2.zero, Vector2.zero);
-        xpFill.color = primaryBlue;
-        var xpRect = xpFill.GetComponent<RectTransform>();
-        xpRect.anchorMin = Vector2.zero;
-        xpRect.anchorMax = new Vector2(0.36f, 1f);
-        xpRect.offsetMin = xpRect.offsetMax = Vector2.zero;
+        Txt("XPText", xpBg.transform, Vector2.zero, Vector2.zero, "720 / 2,000", 10, FontStyles.Normal, TextAlignmentOptions.Center);
 
-        CreateText("XPText", xpBg.transform, Vector2.zero, Vector2.zero, "720 / 2,000", 11, TextAlignmentOptions.Center);
-
-        // Rank
-        CreateText("RankText", root.transform, new Vector2(95, -62), new Vector2(140, 20), "Silver III", 14, TextAlignmentOptions.Left);
+        // Rank text
+        Txt("Rank", root, new Vector2(90, -60), new Vector2(120, 18), "Silver III", 13);
     }
 
-    // ==================== MISSION ====================
-    void BuildMissionPanel()
+    // ====================== MISSION ======================
+    void BuildMission()
     {
-        var root = CreatePanel("MissionPanel", targetCanvas.transform, new Vector2(20, -125), new Vector2(340, 85), TextAnchor.UpperLeft);
+        var root = Panel("Mission", targetCanvas.transform, Anchor.TopLeft, new Vector2(18, -120), new Vector2(330, 82));
 
-        var icon = CreateImage("MissionIcon", root.transform, new Vector2(12, -12), new Vector2(28, 28));
-        icon.color = new Color(1f, 0.85f, 0.2f);
+        // Icon kuning
+        var icon = Img("Icon", root, new Vector2(12, -12), new Vector2(26, 26));
+        icon.color = new Color(1f, 0.84f, 0.2f);
 
-        var title = CreateText("MissionTitle", root.transform, new Vector2(50, -10), new Vector2(270, 26), "Main Mission", 16, TextAlignmentOptions.Left);
-        title.fontStyle = FontStyles.Bold;
-        title.color = new Color(1f, 0.9f, 0.3f);
+        var title = Txt("Title", root, new Vector2(48, -11), new Vector2(260, 24), "Main Mission", 15, FontStyles.Bold);
+        title.color = new Color(1f, 0.88f, 0.3f);
 
-        CreateText("MissionDesc", root.transform, new Vector2(12, -40), new Vector2(310, 22), "Infiltrate the Research Facility", 15, TextAlignmentOptions.Left);
+        Txt("Desc", root, new Vector2(12, -38), new Vector2(300, 20), "Infiltrate the Research Facility", 14);
 
-        var objective = CreateText("Objective", root.transform, new Vector2(12, -62), new Vector2(310, 20), "◆ Reach the Control Room (0/1)", 14, TextAlignmentOptions.Left);
-        objective.color = new Color(0.7f, 0.85f, 1f);
+        var obj = Txt("Obj", root, new Vector2(12, -58), new Vector2(300, 18), "◆ Reach the Control Room (0/1)", 13);
+        obj.color = new Color(0.65f, 0.82f, 1f);
     }
 
-    // ==================== COMPASS ====================
+    // ====================== COMPASS ======================
     void BuildCompass()
     {
-        var root = CreatePanel("Compass", targetCanvas.transform, new Vector2(0, -15), new Vector2(480, 40), TextAnchor.UpperCenter);
-        root.color = new Color(0, 0, 0, 0.35f);
+        var root = Panel("Compass", targetCanvas.transform, Anchor.TopCenter, new Vector2(0, -12), new Vector2(460, 38));
+        root.color = new Color(0, 0, 0, 0.4f);
 
-        string[] dirs = { "W", "285", "300", "NW", "330", "N", "15", "30", "NE", "45" };
-        float spacing = 48f;
-        float startX = -spacing * (dirs.Length - 1) / 2f;
+        string[] labels = { "W", "285", "300", "NW", "330", "N", "15", "30", "NE", "45" };
+        float space = 46f;
+        float start = -space * (labels.Length - 1) / 2f;
 
-        for (int i = 0; i < dirs.Length; i++)
+        for (int i = 0; i < labels.Length; i++)
         {
-            var t = CreateText($"Dir_{i}", root.transform, new Vector2(startX + i * spacing, 0), new Vector2(40, 36), dirs[i], 15, TextAlignmentOptions.Center);
-            t.color = dirs[i] == "N" ? accentCyan : new Color(0.85f, 0.9f, 1f);
-            if (dirs[i] == "N") t.fontStyle = FontStyles.Bold;
+            var t = Txt($"D{i}", root.transform, new Vector2(start + i * space, 1), new Vector2(42, 34), labels[i], 14);
+            bool isN = labels[i] == "N";
+            t.color = isN ? cyan : new Color(0.88f, 0.92f, 1f);
+            if (isN) t.fontStyle = FontStyles.Bold;
         }
 
-        var indicator = CreateImage("CompassIndicator", root.transform, new Vector2(0, -18), new Vector2(12, 8));
-        indicator.color = accentCyan;
+        // Panah kecil di bawah N
+        var arrow = Img("Arrow", root.transform, new Vector2(0, -16), new Vector2(10, 7));
+        arrow.color = cyan;
     }
 
-    // ==================== TOP RIGHT ====================
-    void BuildTopRightResources()
+    // ====================== TOP RIGHT ======================
+    void BuildTopRight()
     {
-        var root = CreateEmpty("TopRightResources", targetCanvas.transform, new Vector2(-20, -15), new Vector2(380, 50), TextAnchor.UpperRight);
-
-        // Diamonds
-        var diamondBox = CreatePanel("DiamondBox", root.transform, new Vector2(-200, 0), new Vector2(110, 36), TextAnchor.UpperRight);
-        var dIcon = CreateImage("DIcon", diamondBox.transform, new Vector2(8, 6), new Vector2(24, 24));
+        // Diamond
+        var dBox = Panel("Diamond", targetCanvas.transform, Anchor.TopRight, new Vector2(-195, -14), new Vector2(105, 34));
+        var dIcon = Img("DIcon", dBox.transform, new Vector2(7, 5), new Vector2(22, 22));
         dIcon.color = new Color(0.4f, 0.7f, 1f);
-        var dText = CreateText("DiamondText", diamondBox.transform, new Vector2(38, 6), new Vector2(65, 24), "1,200", 16, TextAlignmentOptions.Left);
-        dText.fontStyle = FontStyles.Bold;
+        var dTxt = Txt("DText", dBox.transform, new Vector2(34, 5), new Vector2(65, 24), "1,200", 15, FontStyles.Bold);
 
         // Gold
-        var goldBox = CreatePanel("GoldBox", root.transform, new Vector2(-80, 0), new Vector2(120, 36), TextAnchor.UpperRight);
-        var gIcon = CreateImage("GIcon", goldBox.transform, new Vector2(8, 6), new Vector2(24, 24));
-        gIcon.color = new Color(1f, 0.85f, 0.3f);
-        var gText = CreateText("GoldText", goldBox.transform, new Vector2(38, 6), new Vector2(75, 24), "15,340", 16, TextAlignmentOptions.Left);
-        gText.fontStyle = FontStyles.Bold;
+        var gBox = Panel("Gold", targetCanvas.transform, Anchor.TopRight, new Vector2(-80, -14), new Vector2(115, 34));
+        var gIcon = Img("GIcon", gBox.transform, new Vector2(7, 5), new Vector2(22, 22));
+        gIcon.color = gold;
+        var gTxt = Txt("GText", gBox.transform, new Vector2(34, 5), new Vector2(75, 24), "15,340", 15, FontStyles.Bold);
 
-        // Notification + Settings
-        var notif = CreateImage("Notification", root.transform, new Vector2(-30, 5), new Vector2(32, 32));
-        notif.color = new Color(0.9f, 0.3f, 0.3f);
-        var settings = CreateImage("Settings", root.transform, new Vector2(5, 5), new Vector2(32, 32));
-        settings.color = new Color(0.7f, 0.75f, 0.8f);
+        // Notif + Settings
+        var notif = Img("Notif", targetCanvas.transform, Anchor.TopRight, new Vector2(-38, -16), new Vector2(30, 30));
+        notif.color = new Color(0.9f, 0.28f, 0.28f);
+        var set = Img("Settings", targetCanvas.transform, Anchor.TopRight, new Vector2(-5, -16), new Vector2(30, 30));
+        set.color = new Color(0.7f, 0.75f, 0.82f);
     }
 
-    // ==================== MINIMAP ====================
+    // ====================== MINIMAP ======================
     void BuildMinimap()
     {
-        var root = CreatePanel("Minimap", targetCanvas.transform, new Vector2(-20, -70), new Vector2(160, 160), TextAnchor.UpperRight);
-        AddOutline(root.gameObject, primaryBlue, 2f);
+        var root = Panel("Minimap", targetCanvas.transform, Anchor.TopRight, new Vector2(-18, -62), new Vector2(155, 155));
+        Outline(root.gameObject, blueAccent, 2f);
 
-        var mapContent = CreateImage("MapContent", root.transform, Vector2.zero, Vector2.zero);
-        mapContent.color = new Color(0.12f, 0.2f, 0.28f);
-        var mapRect = mapContent.GetComponent<RectTransform>();
-        mapRect.anchorMin = new Vector2(0.05f, 0.05f);
-        mapRect.anchorMax = new Vector2(0.95f, 0.95f);
-        mapRect.offsetMin = mapRect.offsetMax = Vector2.zero;
+        var content = Img("Content", root.transform, Vector2.zero, Vector2.zero);
+        content.color = new Color(0.1f, 0.18f, 0.26f);
+        var crt = content.GetComponent<RectTransform>();
+        crt.anchorMin = new Vector2(0.06f, 0.06f);
+        crt.anchorMax = new Vector2(0.94f, 0.94f);
+        crt.offsetMin = crt.offsetMax = Vector2.zero;
 
-        var playerArrow = CreateImage("PlayerArrow", mapContent.transform, Vector2.zero, new Vector2(18, 18));
-        playerArrow.color = accentCyan;
+        // Player arrow (cyan)
+        var player = Img("Player", content.transform, Vector2.zero, new Vector2(16, 16));
+        player.color = cyan;
 
-        var objMarker = CreateImage("ObjMarker", mapContent.transform, new Vector2(40, 50), new Vector2(16, 16));
-        objMarker.color = new Color(1f, 0.85f, 0.2f);
+        // Objective (kuning)
+        var obj = Img("Obj", content.transform, new Vector2(35, 45), new Vector2(14, 14));
+        obj.color = new Color(1f, 0.85f, 0.2f);
     }
 
-    // ==================== TIMER ====================
+    // ====================== TIMER ======================
     void BuildTimer()
     {
-        var root = CreatePanel("Timer", targetCanvas.transform, new Vector2(-20, -245), new Vector2(100, 36), TextAnchor.UpperRight);
+        var root = Panel("Timer", targetCanvas.transform, Anchor.TopRight, new Vector2(-18, -232), new Vector2(96, 34));
 
-        var clockIcon = CreateImage("ClockIcon", root.transform, new Vector2(8, 6), new Vector2(22, 22));
-        clockIcon.color = Color.white;
+        var icon = Img("Clock", root.transform, new Vector2(8, 6), new Vector2(20, 20));
+        icon.color = Color.white;
 
-        var timeText = CreateText("TimeText", root.transform, new Vector2(36, 5), new Vector2(60, 26), "14:32", 18, TextAlignmentOptions.Left);
-        timeText.fontStyle = FontStyles.Bold;
+        var t = Txt("Time", root.transform, new Vector2(34, 5), new Vector2(58, 24), "14:32", 17, FontStyles.Bold);
     }
 
-    // ==================== LEFT JOYSTICK ====================
-    void BuildLeftJoystickArea()
+    // ====================== LEFT CONTROLS ======================
+    void BuildLeftControls()
     {
-        var outer = CreateImage("JoystickOuter", targetCanvas.transform, new Vector2(140, 160), new Vector2(180, 180), TextAnchor.LowerLeft);
-        outer.color = new Color(1, 1, 1, 0.15f);
+        // Joystick outer
+        var outer = Img("JoyOuter", targetCanvas.transform, Anchor.BottomLeft, new Vector2(130, 145), new Vector2(170, 170));
+        outer.color = new Color(1, 1, 1, 0.13f);
 
-        var inner = CreateImage("JoystickInner", outer.transform, Vector2.zero, new Vector2(80, 80));
-        inner.color = new Color(1, 1, 1, 0.35f);
+        // Joystick inner
+        var inner = Img("JoyInner", outer.transform, Vector2.zero, new Vector2(72, 72));
+        inner.color = new Color(1, 1, 1, 0.32f);
+        Center(inner);
 
-        CreateCircleButton("BulletBtn", targetCanvas.transform, new Vector2(60, 320), 55, TextAnchor.LowerLeft);
-        CreateCircleButton("SprintBtn", targetCanvas.transform, new Vector2(160, 320), 55, TextAnchor.LowerLeft);
+        // Bullet button (kiri atas joystick)
+        CircleBtn("BulletBtn", targetCanvas.transform, Anchor.BottomLeft, new Vector2(55, 300), 52);
+
+        // Sprint button
+        CircleBtn("SprintBtn", targetCanvas.transform, Anchor.BottomLeft, new Vector2(150, 300), 52);
     }
 
-    // ==================== RIGHT BUTTONS ====================
-    void BuildRightActionButtons()
+    // ====================== RIGHT CONTROLS ======================
+    void BuildRightControls()
     {
-        var fireBtn = CreateCircleButton("FireBtn", targetCanvas.transform, new Vector2(-110, 160), 130, TextAnchor.LowerRight);
-        fireBtn.GetComponent<Image>().color = new Color(0.9f, 0.25f, 0.2f, 0.9f);
+        // FIRE (besar merah)
+        var fire = CircleBtn("Fire", targetCanvas.transform, Anchor.BottomRight, new Vector2(-105, 145), 125);
+        fire.GetComponent<Image>().color = new Color(0.92f, 0.22f, 0.18f, 0.92f);
 
-        CreateCircleButton("AimBtn", targetCanvas.transform, new Vector2(-110, 310), 70, TextAnchor.LowerRight);
+        // AIM
+        CircleBtn("Aim", targetCanvas.transform, Anchor.BottomRight, new Vector2(-105, 295), 68);
 
-        CreateAbilityButton("AbilityQ", targetCanvas.transform, new Vector2(-220, 380), "Q", TextAnchor.LowerRight);
-        CreateAbilityButton("AbilityE", targetCanvas.transform, new Vector2(-140, 420), "E", TextAnchor.LowerRight);
-        CreateAbilityButton("AbilityR", targetCanvas.transform, new Vector2(-60, 380), "R", TextAnchor.LowerRight);
+        // Ability Q E R
+        Ability("Q", targetCanvas.transform, new Vector2(-210, 365));
+        Ability("E", targetCanvas.transform, new Vector2(-130, 405));
+        Ability("R", targetCanvas.transform, new Vector2(-55, 365));
 
-        CreateCircleButton("CrouchBtn", targetCanvas.transform, new Vector2(-220, 250), 55, TextAnchor.LowerRight);
-        CreateCircleButton("JumpBtn", targetCanvas.transform, new Vector2(-60, 250), 55, TextAnchor.LowerRight);
+        // Crouch & Jump
+        CircleBtn("Crouch", targetCanvas.transform, Anchor.BottomRight, new Vector2(-210, 235), 52);
+        CircleBtn("Jump", targetCanvas.transform, Anchor.BottomRight, new Vector2(-55, 235), 52);
     }
 
-    // ==================== WEAPON BAR ====================
-    void BuildBottomWeaponBar()
+    // ====================== BOTTOM WEAPON BAR ======================
+    void BuildBottomBar()
     {
-        var root = CreateEmpty("WeaponBar", targetCanvas.transform, new Vector2(0, 90), new Vector2(700, 70), TextAnchor.LowerCenter);
+        var root = Empty("WeaponBar", targetCanvas.transform, Anchor.BottomCenter, new Vector2(0, 85), new Vector2(680, 65));
 
-        var primary = CreatePanel("PrimaryWeapon", root.transform, new Vector2(-220, 0), new Vector2(200, 55), TextAnchor.MiddleCenter);
-        AddOutline(primary.gameObject, primaryBlue, 1.5f);
-        var pAmmo = CreateText("PrimaryAmmo", primary.transform, new Vector2(15, 8), new Vector2(100, 40), "30 / 120", 22, TextAlignmentOptions.Left);
-        pAmmo.fontStyle = FontStyles.Bold;
+        // Primary
+        var prim = Panel("Primary", root.transform, Anchor.MiddleCenter, new Vector2(-210, 0), new Vector2(195, 52));
+        Outline(prim.gameObject, blueAccent, 1.5f);
+        var pAmmo = Txt("PAmmo", prim.transform, new Vector2(14, 6), new Vector2(110, 40), "30 / 120", 21, FontStyles.Bold);
 
-        var secondary = CreatePanel("SecondaryWeapon", root.transform, new Vector2(-20, 0), new Vector2(140, 50), TextAnchor.MiddleCenter);
-        CreateText("SecAmmo", secondary.transform, new Vector2(10, 5), new Vector2(90, 40), "15 / 45", 18, TextAlignmentOptions.Left);
+        // Secondary
+        var sec = Panel("Secondary", root.transform, Anchor.MiddleCenter, new Vector2(-15, 0), new Vector2(130, 48));
+        Txt("SAmmo", sec.transform, new Vector2(12, 5), new Vector2(100, 38), "15 / 45", 17);
 
-        var grenade = CreatePanel("Grenade", root.transform, new Vector2(120, 0), new Vector2(70, 50), TextAnchor.MiddleCenter);
-        var gCount = CreateText("GrenadeCount", grenade.transform, Vector2.zero, Vector2.zero, "2", 20, TextAlignmentOptions.Center);
-        gCount.fontStyle = FontStyles.Bold;
+        // Grenade
+        var gre = Panel("Grenade", root.transform, Anchor.MiddleCenter, new Vector2(115, 0), new Vector2(65, 48));
+        var gTxt = Txt("GCount", gre.transform, Vector2.zero, Vector2.zero, "2", 19, FontStyles.Bold, TextAlignmentOptions.Center);
 
-        var medkit = CreatePanel("Medkit", root.transform, new Vector2(200, 0), new Vector2(70, 50), TextAnchor.MiddleCenter);
-        var mCount = CreateText("MedkitCount", medkit.transform, Vector2.zero, Vector2.zero, "1", 20, TextAlignmentOptions.Center);
-        mCount.fontStyle = FontStyles.Bold;
-        mCount.color = new Color(0.4f, 1f, 0.5f);
+        // Medkit
+        var med = Panel("Medkit", root.transform, Anchor.MiddleCenter, new Vector2(190, 0), new Vector2(65, 48));
+        var mTxt = Txt("MCount", med.transform, Vector2.zero, Vector2.zero, "1", 19, FontStyles.Bold, TextAlignmentOptions.Center);
+        mTxt.color = new Color(0.4f, 1f, 0.55f);
     }
 
-    // ==================== HP + ARMOR ====================
-    void BuildHPArmorBar()
+    // ====================== HP + ARMOR ======================
+    void BuildHPArmor()
     {
-        var root = CreateEmpty("HPArmorRoot", targetCanvas.transform, new Vector2(0, 25), new Vector2(420, 50), TextAnchor.LowerCenter);
+        var root = Empty("HPArmor", targetCanvas.transform, Anchor.BottomCenter, new Vector2(0, 22), new Vector2(400, 48));
 
-        CreateText("HPLabel", root.transform, new Vector2(-180, 15), new Vector2(60, 20), "HP 100", 14, TextAlignmentOptions.Left);
-
-        var hpBg = CreateImage("HPBG", root.transform, new Vector2(0, 18), new Vector2(280, 14));
-        hpBg.color = new Color(0.15f, 0.2f, 0.25f);
-        var hpFill = CreateImage("HPFill", hpBg.transform, Vector2.zero, Vector2.zero);
+        Txt("HPLabel", root.transform, new Vector2(-175, 14), new Vector2(55, 18), "HP 100", 13);
+        var hpBg = Img("HPBG", root.transform, new Vector2(0, 16), new Vector2(265, 13));
+        hpBg.color = new Color(0.12f, 0.16f, 0.2f);
+        var hpFill = Img("HPFill", hpBg.transform, Vector2.zero, Vector2.zero);
         hpFill.color = hpGreen;
-        SetFill(hpFill, 1f);
+        Stretch(hpFill, 1f);
 
-        CreateText("ArmorLabel", root.transform, new Vector2(-180, -8), new Vector2(80, 20), "Armor 100", 14, TextAlignmentOptions.Left);
-
-        var armorBg = CreateImage("ArmorBG", root.transform, new Vector2(0, -5), new Vector2(280, 12));
-        armorBg.color = new Color(0.15f, 0.2f, 0.25f);
-        var armorFill = CreateImage("ArmorFill", armorBg.transform, Vector2.zero, Vector2.zero);
-        armorFill.color = armorBlue;
-        SetFill(armorFill, 1f);
+        Txt("ArmorLabel", root.transform, new Vector2(-175, -7), new Vector2(70, 18), "Armor 100", 13);
+        var arBg = Img("ArmorBG", root.transform, new Vector2(0, -5), new Vector2(265, 11));
+        arBg.color = new Color(0.12f, 0.16f, 0.2f);
+        var arFill = Img("ArmorFill", arBg.transform, Vector2.zero, Vector2.zero);
+        arFill.color = armorBlue;
+        Stretch(arFill, 1f);
     }
 
-    // ==================== HELPERS ====================
-    Image CreatePanel(string name, Transform parent, Vector2 anchoredPos, Vector2 size, TextAnchor anchor = TextAnchor.UpperLeft)
+    // ====================== HELPERS ======================
+    enum Anchor { TopLeft, TopRight, TopCenter, BottomLeft, BottomRight, BottomCenter, MiddleCenter }
+
+    Image Panel(string name, Transform parent, Anchor a, Vector2 pos, Vector2 size)
     {
         var go = new GameObject(name, typeof(RectTransform), typeof(Image));
-        Undo.RegisterCreatedObjectUndo(go, "Create " + name);
+        Undo.RegisterCreatedObjectUndo(go, name);
         go.transform.SetParent(parent, false);
-
-        var rt = go.GetComponent<RectTransform>();
-        SetAnchor(rt, anchor);
-        rt.anchoredPosition = anchoredPos;
-        rt.sizeDelta = size;
-
+        SetAnchor(go.GetComponent<RectTransform>(), a, pos, size);
         var img = go.GetComponent<Image>();
-        img.color = darkPanel;
+        img.color = panelDark;
         return img;
     }
 
-    GameObject CreateEmpty(string name, Transform parent, Vector2 anchoredPos, Vector2 size, TextAnchor anchor)
+    GameObject Empty(string name, Transform parent, Anchor a, Vector2 pos, Vector2 size)
     {
         var go = new GameObject(name, typeof(RectTransform));
-        Undo.RegisterCreatedObjectUndo(go, "Create " + name);
+        Undo.RegisterCreatedObjectUndo(go, name);
         go.transform.SetParent(parent, false);
-
-        var rt = go.GetComponent<RectTransform>();
-        SetAnchor(rt, anchor);
-        rt.anchoredPosition = anchoredPos;
-        rt.sizeDelta = size;
+        SetAnchor(go.GetComponent<RectTransform>(), a, pos, size);
         return go;
     }
 
-    Image CreateImage(string name, Transform parent, Vector2 anchoredPos, Vector2 size, TextAnchor anchor = TextAnchor.UpperLeft)
+    Image Img(string name, Transform parent, Vector2 pos, Vector2 size, Anchor a = Anchor.TopLeft)
     {
         var go = new GameObject(name, typeof(RectTransform), typeof(Image));
-        Undo.RegisterCreatedObjectUndo(go, "Create " + name);
+        Undo.RegisterCreatedObjectUndo(go, name);
         go.transform.SetParent(parent, false);
-
         var rt = go.GetComponent<RectTransform>();
-        SetAnchor(rt, anchor);
-        rt.anchoredPosition = anchoredPos;
+        if (a == Anchor.TopLeft)
+        {
+            rt.anchorMin = rt.anchorMax = new Vector2(0, 1);
+            rt.pivot = new Vector2(0, 1);
+        }
+        rt.anchoredPosition = pos;
         rt.sizeDelta = size;
         return go.GetComponent<Image>();
     }
 
-    TextMeshProUGUI CreateText(string name, Transform parent, Vector2 anchoredPos, Vector2 size, string content, float fontSize, TextAlignmentOptions align)
+    Image Img(string name, Transform parent, Anchor a, Vector2 pos, Vector2 size)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+        Undo.RegisterCreatedObjectUndo(go, name);
+        go.transform.SetParent(parent, false);
+        SetAnchor(go.GetComponent<RectTransform>(), a, pos, size);
+        return go.GetComponent<Image>();
+    }
+
+    TextMeshProUGUI Txt(string name, Transform parent, Vector2 pos, Vector2 size, string text, float sizeF,
+        FontStyles style = FontStyles.Normal, TextAlignmentOptions align = TextAlignmentOptions.Left)
     {
         var go = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI));
-        Undo.RegisterCreatedObjectUndo(go, "Create " + name);
+        Undo.RegisterCreatedObjectUndo(go, name);
         go.transform.SetParent(parent, false);
 
         var rt = go.GetComponent<RectTransform>();
         rt.anchorMin = rt.anchorMax = new Vector2(0, 1);
         rt.pivot = new Vector2(0, 1);
-        rt.anchoredPosition = anchoredPos;
+        rt.anchoredPosition = pos;
         rt.sizeDelta = size;
 
         var tmp = go.GetComponent<TextMeshProUGUI>();
-        tmp.text = content;
-        tmp.fontSize = fontSize;
+        tmp.text = text;
+        tmp.fontSize = sizeF;
+        tmp.fontStyle = style;
         tmp.alignment = align;
         tmp.color = Color.white;
-        if (fontRegular != null) tmp.font = fontRegular;
         tmp.raycastTarget = false;
+        if (font != null) tmp.font = font;
         return tmp;
     }
 
-    GameObject CreateCircleButton(string name, Transform parent, Vector2 anchoredPos, float diameter, TextAnchor anchor)
+    GameObject CircleBtn(string name, Transform parent, Anchor a, Vector2 pos, float diameter)
     {
         var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
-        Undo.RegisterCreatedObjectUndo(go, "Create " + name);
+        Undo.RegisterCreatedObjectUndo(go, name);
         go.transform.SetParent(parent, false);
-
-        var rt = go.GetComponent<RectTransform>();
-        SetAnchor(rt, anchor);
-        rt.anchoredPosition = anchoredPos;
-        rt.sizeDelta = new Vector2(diameter, diameter);
-
-        var img = go.GetComponent<Image>();
-        img.color = new Color(0.2f, 0.25f, 0.35f, 0.85f);
+        SetAnchor(go.GetComponent<RectTransform>(), a, pos, new Vector2(diameter, diameter));
+        go.GetComponent<Image>().color = new Color(0.18f, 0.23f, 0.32f, 0.88f);
         return go;
     }
 
-    void CreateAbilityButton(string name, Transform parent, Vector2 pos, string key, TextAnchor anchor)
+    void Ability(string key, Transform parent, Vector2 pos)
     {
-        var btn = CreateCircleButton(name, parent, pos, 58, anchor);
-        btn.GetComponent<Image>().color = new Color(0.12f, 0.18f, 0.28f, 0.9f);
+        var btn = CircleBtn("Ability" + key, parent, Anchor.BottomRight, pos, 56);
+        btn.GetComponent<Image>().color = new Color(0.12f, 0.17f, 0.26f, 0.92f);
 
-        var keyText = CreateText("Key", btn.transform, Vector2.zero, new Vector2(58, 58), key, 18, TextAlignmentOptions.Center);
-        keyText.fontStyle = FontStyles.Bold;
-        keyText.color = accentCyan;
-
-        var keyRT = keyText.GetComponent<RectTransform>();
-        keyRT.anchorMin = keyRT.anchorMax = new Vector2(0.5f, 0.5f);
-        keyRT.anchoredPosition = Vector2.zero;
+        var t = Txt("Key", btn.transform, Vector2.zero, new Vector2(56, 56), key, 17, FontStyles.Bold, TextAlignmentOptions.Center);
+        t.color = cyan;
+        var rt = t.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;
     }
 
-    void SetAnchor(RectTransform rt, TextAnchor anchor)
+    void SetAnchor(RectTransform rt, Anchor a, Vector2 pos, Vector2 size)
     {
-        switch (anchor)
+        switch (a)
         {
-            case TextAnchor.UpperLeft:
-                rt.anchorMin = rt.anchorMax = new Vector2(0, 1);
-                rt.pivot = new Vector2(0, 1);
-                break;
-            case TextAnchor.UpperRight:
-                rt.anchorMin = rt.anchorMax = new Vector2(1, 1);
-                rt.pivot = new Vector2(1, 1);
-                break;
-            case TextAnchor.UpperCenter:
-                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1);
-                rt.pivot = new Vector2(0.5f, 1);
-                break;
-            case TextAnchor.LowerLeft:
-                rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
-                rt.pivot = new Vector2(0, 0);
-                break;
-            case TextAnchor.LowerRight:
-                rt.anchorMin = rt.anchorMax = new Vector2(1, 0);
-                rt.pivot = new Vector2(1, 0);
-                break;
-            case TextAnchor.LowerCenter:
-                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0);
-                rt.pivot = new Vector2(0.5f, 0);
-                break;
-            case TextAnchor.MiddleCenter:
-                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-                rt.pivot = new Vector2(0.5f, 0.5f);
-                break;
+            case Anchor.TopLeft:     rt.anchorMin = rt.anchorMax = new Vector2(0, 1); rt.pivot = new Vector2(0, 1); break;
+            case Anchor.TopRight:    rt.anchorMin = rt.anchorMax = new Vector2(1, 1); rt.pivot = new Vector2(1, 1); break;
+            case Anchor.TopCenter:   rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1); rt.pivot = new Vector2(0.5f, 1); break;
+            case Anchor.BottomLeft:  rt.anchorMin = rt.anchorMax = new Vector2(0, 0); rt.pivot = new Vector2(0, 0); break;
+            case Anchor.BottomRight: rt.anchorMin = rt.anchorMax = new Vector2(1, 0); rt.pivot = new Vector2(1, 0); break;
+            case Anchor.BottomCenter:rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0); rt.pivot = new Vector2(0.5f, 0); break;
+            case Anchor.MiddleCenter:rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f); rt.pivot = new Vector2(0.5f, 0.5f); break;
         }
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = size;
     }
 
-    void SetFill(Image img, float amount)
+    void Stretch(Image img, float fill)
     {
         var rt = img.GetComponent<RectTransform>();
         rt.anchorMin = Vector2.zero;
-        rt.anchorMax = new Vector2(Mathf.Clamp01(amount), 1f);
+        rt.anchorMax = new Vector2(Mathf.Clamp01(fill), 1);
         rt.offsetMin = rt.offsetMax = Vector2.zero;
     }
 
-    void AddOutline(GameObject go, Color color, float thickness)
+    void Center(Image img)
     {
-        var outline = go.AddComponent<Outline>();
-        outline.effectColor = color;
-        outline.effectDistance = new Vector2(thickness, -thickness);
+        var rt = img.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;
+    }
+
+    void Outline(GameObject go, Color c, float t)
+    {
+        var o = go.AddComponent<Outline>();
+        o.effectColor = c;
+        o.effectDistance = new Vector2(t, -t);
     }
 }
 #endif
