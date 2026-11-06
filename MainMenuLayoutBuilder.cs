@@ -4,268 +4,369 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using UnityEditor;
 using TMPro;
-using System.IO;
 
-/// <summary>
-/// Letakkan di Assets/Editor/ (bersama ChamferGraphic.cs di Assets/Scripts/).
-/// Jalankan: Tools > Lobby > Build Main Menu Layout
-/// Canvas 1920x1080: profil kiri atas, status kanan atas, garis frame,
-/// 6 tombol bawah (SHOP, SETTINGS, QUIT, CHARACTER, INVENTORY, START), footer versi.
-/// </summary>
-public static class MainMenuLayoutBuilder
+public static class LobbyLayoutBuilder
 {
-    // ---------- Palet ----------
-    static readonly Color PanelFill   = new Color(0.03f, 0.07f, 0.16f, 0.88f);
-    static readonly Color BorderMain  = new Color(0.20f, 0.50f, 1.00f, 1f);
-    static readonly Color BorderThin  = new Color(0.12f, 0.27f, 0.62f, 1f);
-    static readonly Color BtnFill     = new Color(0.04f, 0.09f, 0.20f, 0.92f);
-    static readonly Color BtnBorder   = new Color(0.25f, 0.45f, 0.85f, 1f);
-    static readonly Color StartFill   = new Color(0.05f, 0.25f, 0.95f, 1f);
-    static readonly Color StartBorder = new Color(0.35f, 0.62f, 1.00f, 1f);
-    static readonly Color Cyan        = new Color(0.45f, 0.78f, 1.00f, 1f);
-    static readonly Color RankBlue    = new Color(0.20f, 0.50f, 1.00f, 1f);
-    static readonly Color Dim         = new Color(0.55f, 0.66f, 0.84f, 1f);
-    static readonly Color Line        = new Color(0.20f, 0.45f, 1.00f, 0.45f);
+    // ==================== PALET WARNA ====================
+    static readonly Color BgDark     = new Color(0.015f, 0.03f, 0.07f, 1f);
+    static readonly Color PanelNavy  = new Color(0.02f, 0.08f, 0.2f, 0.88f);
+    static readonly Color CyanGlow   = new Color(0.2f, 0.7f, 1f, 1f);
+    static readonly Color Gold       = new Color(1f, 0.75f, 0.2f, 1f);
+    static readonly Color RedBadge   = new Color(0.9f, 0.1f, 0.1f, 1f);
+    static readonly Color ActiveBlue = new Color(0.05f, 0.3f, 0.85f, 0.95f);
 
-    [MenuItem("Tools/Lobby/Build Main Menu Layout")]
+    [MenuItem("Tools/Lobby/Build Lobby Layout (Final Chamfer)")]
     public static void Build()
     {
-        var old = GameObject.Find("MainMenuCanvas");
+        var old = GameObject.Find("LobbyCanvas");
         if (old) Undo.DestroyObjectImmediate(old);
 
-        var canvasGO = new GameObject("MainMenuCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-        Undo.RegisterCreatedObjectUndo(canvasGO, "Build Main Menu Layout");
-        canvasGO.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
-        
+        var canvasGO = new GameObject("LobbyCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        Undo.RegisterCreatedObjectUndo(canvasGO, "Build Lobby Layout");
+
+        var canvas = canvasGO.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
         var scaler = canvasGO.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920, 1080);
-        scaler.matchWidthOrHeight = 0.5f; // Kunci aspek rasio agar responsif di semua layar
+        scaler.matchWidthOrHeight = 0.5f;
 
-        // Pengecekan EventSystem
-#if UNITY_2023_1_OR_NEWER
-        bool hasES = Object.FindFirstObjectByType<EventSystem>() != null;
-#else
-        bool hasES = Object.FindObjectOfType<EventSystem>() != null;
-#endif
-        if (!hasES)
+        if (!Object.FindObjectOfType<EventSystem>())
         {
-            var es = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
-            Undo.RegisterCreatedObjectUndo(es, "Build Main Menu Layout");
+            new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
         }
 
         var root = canvasGO.transform;
 
-        // ==================== BACKGROUND DARI ASSETS/ART ====================
-        var bg = Img(root, "Background_Art", new Color(0.01f, 0.02f, 0.06f, 1f));
+        // ==================== BACKGROUND ====================
+        // Background utama (bisa diganti sprite nanti)
+        var bg = Img(root, "Background", BgDark);
         Stretch(bg.rectTransform);
 
-        // Memuat gambar secara spesifik
-        Sprite bgSprite = LoadBackgroundSprite("Assets/Art/a-eclipse.png");
-        
-        if (bgSprite != null)
-        {
-            bg.sprite = bgSprite;
-            bg.color = Color.white;
-            bg.type = Image.Type.Simple;
-            bg.preserveAspect = false; // Memastikan gambar menutupi seluruh layar tanpa peduli rasio
-        }
-        else
-        {
-            Debug.LogWarning("Gagal memuat gambar. Pastikan file 'a-eclipse.png' ada di Assets/Art/");
-        }
-
-        // Overlay gelap agar teks tetap terbaca
-        var overlay = Img(root, "Overlay", new Color(0, 0, 0, 0.3f));
+        // Overlay gelap biar lebih dalam (opsional)
+        var overlay = Img(root, "BackgroundOverlay", new Color(0, 0, 0, 0.25f));
         Stretch(overlay.rectTransform);
 
-        // ==================== BUILD ELEMEN UI ====================
-        BuildFrameLines(root);
         BuildProfile(root);
         BuildTopRight(root);
-        BuildBottomMenu(root);
-
-        Label(root, "VersionFooter", "v5.08  •  REGION: NA  •  22ms", 15, FontStyles.Normal, new Color(0.45f, 0.52f, 0.70f, 1f),
-              TextAlignmentOptions.Left, new Vector2(0, 0), new Vector2(46, 20), new Vector2(400, 22));
+        BuildLeftColumn(root);
+        BuildRightColumn(root);
+        BuildBottomBar(root);
+        BuildDeploy(root);
 
         Selection.activeGameObject = canvasGO;
-        Debug.Log("✅ Main menu layout selesai dibuat!");
+        Debug.Log("✅ Layout selesai! Ukuran sudah disesuaikan + Background ditambahkan.");
     }
 
-    // Fungsi memuat Sprite & mengubah Texture Type secara otomatis
-    static Sprite LoadBackgroundSprite(string path)
+    // =====================================================================
+    //  HELPER: BUAT SPRITE CHAMFER
+    // =====================================================================
+    static Sprite CreateChamferedSprite(int width, int height, int cutSize)
     {
-        if (!File.Exists(path))
-        {
-            Debug.LogError($"File tidak ditemukan di path: {path}");
-            return null;
-        }
+        var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        var pixels = new Color[width * height];
 
-        TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
-        if (importer != null)
+        for (int y = 0; y < height; y++)
         {
-            // Ubah otomatis menjadi Sprite jika belum
-            if (importer.textureType != TextureImporterType.Sprite)
+            for (int x = 0; x < width; x++)
             {
-                importer.textureType = TextureImporterType.Sprite;
-                importer.spriteImportMode = SpriteImportMode.Single;
-                importer.SaveAndReimport(); 
-                Debug.Log($"✅ Tipe tekstur {path} berhasil diubah menjadi Sprite otomatis.");
+                bool cutTL = (x + y) < cutSize;
+                bool cutBR = ((width - 1 - x) + (height - 1 - y)) < cutSize;
+
+                if (cutTL || cutBR)
+                    pixels[y * width + x] = Color.clear;
+                else
+                    pixels[y * width + x] = Color.white;
             }
         }
 
-        return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        tex.SetPixels(pixels);
+        tex.Apply();
+        tex.filterMode = FilterMode.Bilinear;
+
+        return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), 100f);
     }
 
     // =====================================================================
-    //  GARIS FRAME (atas & bawah area tengah)
-    // =====================================================================
-    static void BuildFrameLines(Transform root)
-    {
-        FrameLine(root, "FrameTop", new Vector2(0.5f, 1), -236f);
-        FrameLine(root, "FrameBottom", new Vector2(0.5f, 0), 182f);
-    }
-
-    static void FrameLine(Transform root, string name, Vector2 anchor, float y)
-    {
-        var line = Img(root, name, Line);
-        Place(line.rectTransform, anchor, new Vector2(0, y), new Vector2(1780, 1));
-        
-        for (int i = 0; i < 2; i++)
-        {
-            float x = i == 0 ? -890f : 890f;
-            var tick = Img(line.transform, "Tick" + i, Line);
-            Place(tick.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(x, 0), new Vector2(1, 26));
-        }
-    }
-
-    // =====================================================================
-    //  PROFIL (kiri atas)
+    //  PANEL PROFIL (KIRI ATAS) - sedikit lebih kecil
     // =====================================================================
     static void BuildProfile(Transform root)
     {
-        var p = Shape(root, "ProfilePanel", new Vector2(420, 136), PanelFill, BorderMain, 0, 34, false, 2f);
-        Place(p, new Vector2(0, 1), new Vector2(50, -50), new Vector2(420, 136));
+        var p = ChamferPanel(root, "ProfilePanel", new Vector2(420, 130), PanelNavy, 16);
+        Place(p, new Vector2(0, 1), new Vector2(28, -28), new Vector2(420, 130));
 
-        var avatar = Shape(p, "Avatar", new Vector2(84, 84), new Color(0.04f, 0.10f, 0.22f, 1f), BorderThin, 0, 0, false, 1f);
-        Place(avatar, new Vector2(0, 1), new Vector2(14, -14), new Vector2(84, 84));
-        var portrait = Img(avatar, "Portrait", Color.white);
-        Stretch(portrait.rectTransform, 3);
-        portrait.color = new Color(0.1f, 0.2f, 0.4f, 1f);
+        var avatar = ChamferPanel(p, "AvatarFrame", new Vector2(100, 100), new Color(0.1f, 0.2f, 0.4f), 12);
+        Place(avatar, new Vector2(0, 1), new Vector2(14, -14), new Vector2(100, 100));
 
-        var lvl = Shape(p, "LevelTag", new Vector2(56, 20), new Color(0.02f, 0.04f, 0.10f, 1f), BorderThin, 0, 0, false, 1f);
-        Place(lvl, new Vector2(0, 0), new Vector2(10, 10), new Vector2(56, 20));
-        Label(lvl, "Text", "LVL 87", 12, FontStyles.Bold, Color.white, TextAlignmentOptions.Center,
-              new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(56, 20));
+        Label(p, "NameText", "FamaLine", 26, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 1), new Vector2(130, -14), new Vector2(270, 32));
 
-        Label(p, "Name", "CYPHER | AGENT 013", 24, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
-              new Vector2(0, 1), new Vector2(114, -16), new Vector2(290, 30), 1f);
+        Label(p, "LevelText", "Lv. 12", 20, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 1), new Vector2(130, -50), new Vector2(80, 28));
 
-        var rankIcon = Img(p, "Icon", RankBlue);
-        Place(rankIcon.rectTransform, new Vector2(0, 1), new Vector2(114, -54), new Vector2(24, 24));
-        Label(p, "Rank", "IMMORTAL 2", 20, FontStyles.Bold, RankBlue, TextAlignmentOptions.Left,
-              new Vector2(0, 1), new Vector2(146, -53), new Vector2(200, 26), 0.5f);
+        // EXP Bar
+        var expBar = Img(p, "ExpBar_BG", new Color(0.1f, 0.15f, 0.3f));
+        Place(expBar.rectTransform, new Vector2(0, 1), new Vector2(200, -56), new Vector2(190, 9));
 
-        Label(p, "Peak", "PEAK: RADIANT", 17, FontStyles.Normal, Color.white, TextAlignmentOptions.Left,
-              new Vector2(0, 1), new Vector2(114, -88), new Vector2(250, 24));
+        var expFill = Img(expBar.transform, "ExpBar_Fill", CyanGlow);
+        expFill.rectTransform.anchorMin = Vector2.zero;
+        expFill.rectTransform.anchorMax = new Vector2(0.36f, 1f);
+        expFill.rectTransform.offsetMin = expFill.rectTransform.offsetMax = Vector2.zero;
+
+        Label(p, "ExpText", "EXP 720 / 2,000", 13, FontStyles.Normal, CyanGlow, TextAlignmentOptions.Left,
+              new Vector2(0, 1), new Vector2(200, -68), new Vector2(190, 18));
+
+        var rankIcon = Img(p, "RankIcon", Gold);
+        Place(rankIcon.rectTransform, new Vector2(0, 1), new Vector2(130, -90), new Vector2(26, 26));
+
+        Label(p, "RankText", "Silver III", 18, FontStyles.Normal, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 1), new Vector2(165, -90), new Vector2(150, 26));
     }
 
     // =====================================================================
-    //  STATUS KANAN ATAS
+    //  MATA UANG & TOMBOL (KANAN ATAS)
     // =====================================================================
     static void BuildTopRight(Transform root)
     {
-        var g = Group(root, "TopRight", true, 8, TextAnchor.MiddleRight);
-        Place(g, new Vector2(1, 1), new Vector2(-50, -50), new Vector2(700, 48));
+        var g = Group(root, "TopRightGroup", true, 12, TextAnchor.MiddleRight);
+        Place(g, new Vector2(1, 1), new Vector2(-28, -36), new Vector2(580, 46));
 
-        InfoBox(g, "SignalBox", 190);
-        InfoBox(g, "VPBox", 180);
-        InfoBox(g, "CoinBox", 210);
-        SquareIconButton(g, "NotificationButton");
-        SquareIconButton(g, "ProfileButton");
+        CurrencyPill(g, "GemPill", "1,200", CyanGlow);
+        CurrencyPill(g, "CoinPill", "15,340", Gold);
+
+        IconButton(g, "Btn_Bell", true);
+        IconButton(g, "Btn_Friends", false);
+        IconButton(g, "Btn_Settings", false);
     }
 
-    static RectTransform InfoBox(Transform parent, string name, float width)
+    static void CurrencyPill(Transform parent, string name, string value, Color iconColor)
     {
-        var rt = Shape(parent, name, new Vector2(width, 48), PanelFill, BorderThin, 0, 0, false, 1f);
-        
-        // Kunci ukuran agar tidak melar
-        var le = rt.gameObject.AddComponent<LayoutElement>();
-        le.preferredWidth = width;
-        le.preferredHeight = 48;
-        le.flexibleWidth = 0;
+        var p = ChamferPanel(parent, name, new Vector2(158, 40), PanelNavy, 9);
 
-        if (name == "SignalBox") {
-            for (int i = 0; i < 4; i++) {
-                float h = 6f + 4f * i;
-                var bar = Img(rt, "Bar" + i, Cyan);
-                Place(bar.rectTransform, new Vector2(0, 0.5f), new Vector2(14 + i * 7, -9 + h / 2f), new Vector2(4, h));
-            }
-            Label(rt, "Text", "SIGNAL 4 BARS", 15, FontStyles.Normal, Dim, TextAlignmentOptions.Left,
-                  new Vector2(0, 0.5f), new Vector2(50, 0), new Vector2(130, 24));
+        var icon = Img(p, "Icon", iconColor);
+        Place(icon.rectTransform, new Vector2(0, 0.5f), new Vector2(11, 0), new Vector2(22, 22));
+
+        Label(p, "Value", value, 20, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 0.5f), new Vector2(42, 0), new Vector2(75, 28));
+
+        Label(p, "Plus", "+", 24, FontStyles.Bold, CyanGlow, TextAlignmentOptions.Center,
+              new Vector2(1, 0.5f), new Vector2(-8, 0), new Vector2(28, 28));
+    }
+
+    static void IconButton(Transform parent, string name, bool hasBadge)
+    {
+        var b = ChamferPanel(parent, name, new Vector2(44, 44), PanelNavy, 9);
+
+        var icon = Img(b, "Icon", CyanGlow);
+        Place(icon.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(24, 24));
+
+        if (hasBadge)
+        {
+            var dot = Img(b, "Badge", RedBadge);
+            Place(dot.rectTransform, new Vector2(1, 1), new Vector2(-2, -2), new Vector2(14, 14));
         }
-        else if (name == "VPBox") {
-            var vpIcon = Img(rt, "Icon", Cyan);
-            Place(vpIcon.rectTransform, new Vector2(0, 0.5f), new Vector2(14, 0), new Vector2(22, 22));
-            Label(rt, "Text", "<color=#8FA9D6>VP</color>  <b>1,200</b>", 18, FontStyles.Normal, Color.white,
-                  TextAlignmentOptions.Left, new Vector2(0, 0.5f), new Vector2(44, 0), new Vector2(130, 26));
+    }
+
+    // =====================================================================
+    //  KOLOM KIRI
+    // =====================================================================
+    static void BuildLeftColumn(Transform root)
+    {
+        // New Agent Banner
+        var banner = ChamferPanel(root, "NewAgentBanner", new Vector2(380, 140), new Color(0.05f, 0.15f, 0.35f, 0.92f), 14);
+        Place(banner, new Vector2(0, 0), new Vector2(28, 340), new Vector2(380, 140));
+
+        var charaArt = Img(banner, "AgentArt", new Color(1, 1, 1, 0));
+        Place(charaArt.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0), new Vector2(165, 140));
+
+        Label(banner, "Title", "NEW AGENT\n\"VYRA\"", 24, FontStyles.Bold | FontStyles.Italic, Color.white, TextAlignmentOptions.Left,
+              new Vector2(1, 1), new Vector2(-14, -14), new Vector2(190, 55));
+
+        var getBtn = ChamferPanel(banner, "GetNowButton", new Vector2(130, 34), new Color(0.1f, 0.4f, 0.9f), 9);
+        Place(getBtn, new Vector2(1, 0), new Vector2(-14, 14), new Vector2(130, 34));
+        Label(getBtn, "Text", "GET NOW »", 15, FontStyles.Bold, Color.white, TextAlignmentOptions.Center,
+              new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(130, 34));
+
+        // Notice
+        var notice = ChamferPanel(root, "NoticePanel", new Vector2(380, 100), PanelNavy, 12);
+        Place(notice, new Vector2(0, 0), new Vector2(28, 220), new Vector2(380, 100));
+
+        var iconNotice = Img(notice, "Icon", CyanGlow);
+        Place(iconNotice.rectTransform, new Vector2(0, 1), new Vector2(14, -14), new Vector2(22, 22));
+
+        Label(notice, "Title", "NOTICE", 17, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 1), new Vector2(46, -14), new Vector2(140, 22));
+
+        Label(notice, "Body", "Maintenance will be on\nNov 10, 08:00 (UTC+7).", 15, FontStyles.Normal, new Color(0.8f, 0.9f, 1f), TextAlignmentOptions.Left,
+              new Vector2(0, 0), new Vector2(14, 14), new Vector2(300, 45));
+
+        Label(notice, "Arrow", ">", 22, FontStyles.Bold, CyanGlow, TextAlignmentOptions.Center,
+              new Vector2(1, 0.5f), new Vector2(-14, 0), new Vector2(28, 28));
+    }
+
+    // =====================================================================
+    //  KOLOM KANAN
+    // =====================================================================
+    static void BuildRightColumn(Transform root)
+    {
+        // Daily Mission
+        var dm = ChamferPanel(root, "DailyMission", new Vector2(340, 92), PanelNavy, 12);
+        Place(dm, new Vector2(1, 1), new Vector2(-28, -95), new Vector2(340, 92));
+
+        var dmi = Img(dm, "Icon", CyanGlow);
+        Place(dmi.rectTransform, new Vector2(0, 1), new Vector2(14, -14), new Vector2(22, 22));
+
+        Label(dm, "Title", "DAILY MISSION", 16, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 1), new Vector2(46, -14), new Vector2(180, 22));
+
+        Label(dm, "Progress", "0 / 3", 16, FontStyles.Bold, Color.white, TextAlignmentOptions.Right,
+              new Vector2(1, 1), new Vector2(-36, -14), new Vector2(70, 22));
+
+        Label(dm, "Desc", "Play 3 matches", 15, FontStyles.Normal, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 1), new Vector2(14, -46), new Vector2(230, 22));
+
+        Label(dm, "Reward", "x100", 16, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
+              new Vector2(1, 0), new Vector2(-75, 14), new Vector2(55, 22));
+
+        Label(dm, "Arrow", ">", 22, FontStyles.Bold, CyanGlow, TextAlignmentOptions.Center,
+              new Vector2(1, 0.5f), new Vector2(-14, 0), new Vector2(28, 28));
+
+        // Season Rank
+        var sr = ChamferPanel(root, "SeasonRank", new Vector2(340, 110), PanelNavy, 12);
+        Place(sr, new Vector2(1, 1), new Vector2(-28, -200), new Vector2(340, 110));
+
+        var srIcon = Img(sr, "Icon_Badge", Gold);
+        Place(srIcon.rectTransform, new Vector2(0, 0.5f), new Vector2(36, 0), new Vector2(54, 54));
+
+        Label(sr, "Label", "SEASON RANK", 13, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 1), new Vector2(105, -16), new Vector2(180, 18));
+
+        Label(sr, "RankName", "Bronze I", 22, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 1), new Vector2(105, -40), new Vector2(180, 28));
+
+        Label(sr, "RankPoint", "0 / 1000", 13, FontStyles.Normal, CyanGlow, TextAlignmentOptions.Left,
+              new Vector2(0, 0), new Vector2(105, 16), new Vector2(140, 18));
+
+        Label(sr, "Arrow", ">", 22, FontStyles.Bold, CyanGlow, TextAlignmentOptions.Center,
+              new Vector2(1, 0.5f), new Vector2(-14, 0), new Vector2(28, 28));
+
+        // New Map
+        var nm = ChamferPanel(root, "NewMap", new Vector2(340, 140), new Color(0.05f, 0.1f, 0.2f), 12);
+        Place(nm, new Vector2(1, 0), new Vector2(-28, 160), new Vector2(340, 140));
+
+        var mapArt = Img(nm, "MapArt", new Color(0.1f, 0.2f, 0.4f));
+        Stretch(mapArt.rectTransform, 4);
+
+        Label(nm, "Tag", "NEW MAP", 13, FontStyles.Bold, Gold, TextAlignmentOptions.Left,
+              new Vector2(0, 0), new Vector2(14, 38), new Vector2(180, 18));
+
+        Label(nm, "MapName", "RESEARCH FACILITY »", 18, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 0), new Vector2(14, 14), new Vector2(280, 24));
+    }
+
+    // =====================================================================
+    //  BOTTOM BAR (ukuran lebih pas)
+    // =====================================================================
+    static void BuildBottomBar(Transform root)
+    {
+        var g = Group(root, "BottomBarGroup", true, 11, TextAnchor.LowerLeft);
+        Place(g, new Vector2(0, 0), new Vector2(28, 28), new Vector2(1050, 92));
+
+        MenuButton(g, "Operations", "OPERATIONS", "Play Missions", true, true);
+        MenuButton(g, "Agents", "AGENTS", "Select Character", false, false);
+        MenuButton(g, "Armory", "ARMORY", "Upgrade Weapons", false, false);
+        MenuButton(g, "Inventory", "INVENTORY", "Manage Items", false, false);
+        MenuButton(g, "Store", "STORE", "Buy Items", false, false);
+        MenuButton(g, "Settings", "SETTINGS", "Game Settings", false, false);
+    }
+
+    static void MenuButton(Transform parent, string name, string title, string sub, bool isActive, bool hasBadge)
+    {
+        Color baseColor = isActive ? ActiveBlue : PanelNavy;
+
+        var container = Rect(name + "_Container", parent);
+        container.sizeDelta = new Vector2(148, 92);          // ← ukuran lebih pas
+
+        var sprite = CreateChamferedSprite(148, 92, 20);
+        var bgImg = container.gameObject.AddComponent<Image>();
+        bgImg.sprite = sprite;
+        bgImg.color = baseColor;
+        bgImg.type = Image.Type.Simple;
+        bgImg.raycastTarget = true;
+
+        var outline = container.gameObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0.25f, 0.65f, 1f, 0.75f);
+        outline.effectDistance = new Vector2(2, -2);
+
+        // Accent line
+        var line = Img(container, "AccentLine", isActive ? CyanGlow : new Color(0.2f, 0.5f, 1f, 0.55f));
+        Place(line.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -3), new Vector2(110, 3));
+
+        // Icon
+        var icon = Img(container, "Icon", isActive ? Color.white : CyanGlow);
+        Place(icon.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -20), new Vector2(32, 32));
+
+        // Texts
+        Label(container, "Title", title, 16, FontStyles.Bold, Color.white, TextAlignmentOptions.Center,
+              new Vector2(0.5f, 0), new Vector2(0, 30), new Vector2(140, 22));
+
+        Label(container, "Sub", sub, 12, FontStyles.Normal, CyanGlow, TextAlignmentOptions.Center,
+              new Vector2(0.5f, 0), new Vector2(0, 12), new Vector2(140, 18));
+
+        if (hasBadge)
+        {
+            var dot = Img(container, "Badge", RedBadge);
+            Place(dot.rectTransform, new Vector2(0.82f, 1), new Vector2(0, -5), new Vector2(14, 14));
         }
-        else if (name == "CoinBox") {
-            var coinIcon = Img(rt, "Icon", new Color(0.30f, 0.55f, 1f, 1f));
-            Place(coinIcon.rectTransform, new Vector2(0, 0.5f), new Vector2(14, 0), new Vector2(22, 22));
-            Label(rt, "Text", "<color=#8FA9D6>COINS</color>  <b>15,340</b>", 18, FontStyles.Normal, Color.white,
-                  TextAlignmentOptions.Left, new Vector2(0, 0.5f), new Vector2(44, 0), new Vector2(160, 26));
-        }
-        
+
+        var btn = container.gameObject.AddComponent<Button>();
+        btn.targetGraphic = bgImg;
+    }
+
+    // =====================================================================
+    //  DEPLOY BUTTON
+    // =====================================================================
+    static void BuildDeploy(Transform root)
+    {
+        var d = ChamferPanel(root, "DeployButton", new Vector2(380, 100), new Color(0.1f, 0.4f, 0.95f), 16);
+        Place(d, new Vector2(1, 0), new Vector2(-28, 48), new Vector2(380, 100));
+
+        var topLine = Img(d, "TopLine", CyanGlow);
+        Place(topLine.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -2), new Vector2(360, 4));
+
+        Label(d, "Title", "DEPLOY »", 44, FontStyles.Bold | FontStyles.Italic, Color.white, TextAlignmentOptions.Center,
+              new Vector2(0.5f, 1), new Vector2(0, -10), new Vector2(360, 55));
+
+        Label(d, "Sub", "ENTER THE BATTLEFIELD", 15, FontStyles.Bold, CyanGlow, TextAlignmentOptions.Center,
+              new Vector2(0.5f, 0), new Vector2(0, 14), new Vector2(360, 22));
+    }
+
+    // =====================================================================
+    //  HELPER FUNCTIONS
+    // =====================================================================
+    static RectTransform ChamferPanel(Transform parent, string name, Vector2 size, Color fill, int cutSize)
+    {
+        var rt = Rect(name, parent);
+        rt.sizeDelta = size;
+
+        var sprite = CreateChamferedSprite((int)size.x, (int)size.y, cutSize);
+        var img = rt.gameObject.AddComponent<Image>();
+        img.sprite = sprite;
+        img.color = fill;
+        img.type = Image.Type.Simple;
+        img.raycastTarget = true;
+
+        var outline = rt.gameObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0.2f, 0.6f, 1f, 0.6f);
+        outline.effectDistance = new Vector2(2, -2);
+
+        var btn = rt.gameObject.AddComponent<Button>();
+        btn.targetGraphic = img;
+
         return rt;
     }
 
-    static void SquareIconButton(Transform parent, string name)
-    {
-        var b = Shape(parent, name, new Vector2(48, 48), PanelFill, BorderThin, 0, 0, true, 1f);
-        
-        var le = b.gameObject.AddComponent<LayoutElement>();
-        le.preferredWidth = 48;
-        le.preferredHeight = 48;
-        le.flexibleWidth = 0;
-
-        var icon = Img(b, "Icon", Dim);
-        Place(icon.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(22, 22));
-    }
-
-    // =====================================================================
-    //  TOMBOL BAWAH
-    // =====================================================================
-    static void BuildBottomMenu(Transform root)
-    {
-        var g = Group(root, "BottomMenu", true, 22, TextAnchor.MiddleCenter);
-        Place(g, new Vector2(0.5f, 0), new Vector2(0, 60), new Vector2(1540, 64));
-
-        MenuButton(g, "ShopButton", "SHOP", false, 220);
-        MenuButton(g, "SettingsButton", "SETTINGS", false, 220);
-        MenuButton(g, "QuitButton", "QUIT", false, 220);
-        MenuButton(g, "CharacterButton", "CHARACTER", false, 220);
-        MenuButton(g, "InventoryButton", "INVENTORY", false, 220);
-        MenuButton(g, "StartButton", "START", true, 260); // START lebih lebar
-    }
-
-    static void MenuButton(Transform parent, string name, string text, bool primary, float width)
-    {
-        var b = Shape(parent, name, new Vector2(width, 64),
-                      primary ? StartFill : BtnFill, primary ? StartBorder : BtnBorder, 18, 18, true, primary ? 0f : 1.5f);
-        
-        var le = b.gameObject.AddComponent<LayoutElement>();
-        le.preferredWidth = width;
-        le.preferredHeight = 64;
-        le.flexibleWidth = 0;
-
-        Label(b, "Text", text, 22, FontStyles.Bold, Color.white, TextAlignmentOptions.Center,
-              new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(width - 10, 30), 1f);
-    }
-
-    // =====================================================================
-    //  HELPER
-    // =====================================================================
     static RectTransform Rect(string name, Transform parent)
     {
         var go = new GameObject(name, typeof(RectTransform));
@@ -297,45 +398,13 @@ public static class MainMenuLayoutBuilder
         return img;
     }
 
-    static RectTransform Shape(Transform parent, string name, Vector2 size, Color fill, Color border,
-                               float cutTL, float cutBR, bool clickable, float thickness)
-    {
-        var rt = Rect(name, parent);
-        rt.sizeDelta = size;
-
-        var outer = rt.gameObject.AddComponent<ChamferGraphic>();
-        outer.color = border;
-        outer.cutTopLeft = cutTL;
-        outer.cutBottomRight = cutBR;
-        outer.raycastTarget = clickable;
-
-        var innerRt = Rect("Fill", rt);
-        Stretch(innerRt, thickness);
-        var inner = innerRt.gameObject.AddComponent<ChamferGraphic>();
-        inner.color = fill;
-        inner.cutTopLeft = Mathf.Max(0, cutTL - 0.586f * thickness);
-        inner.cutBottomRight = Mathf.Max(0, cutBR - 0.586f * thickness);
-        inner.raycastTarget = false;
-
-        if (clickable)
-        {
-            var btn = rt.gameObject.AddComponent<Button>();
-            btn.targetGraphic = outer;
-            var cb = btn.colors;
-            cb.normalColor = Color.white;
-            cb.highlightedColor = new Color(0.75f, 0.92f, 1f);
-            cb.pressedColor = new Color(0.55f, 0.75f, 1f);
-            btn.colors = cb;
-        }
-        return rt;
-    }
-
     static RectTransform Group(Transform parent, string name, bool horizontal, float spacing, TextAnchor align)
     {
         var rt = Rect(name, parent);
         HorizontalOrVerticalLayoutGroup g = horizontal
             ? (HorizontalOrVerticalLayoutGroup)rt.gameObject.AddComponent<HorizontalLayoutGroup>()
             : rt.gameObject.AddComponent<VerticalLayoutGroup>();
+
         g.spacing = spacing;
         g.childAlignment = align;
         g.childControlWidth = g.childControlHeight = false;
@@ -344,17 +413,17 @@ public static class MainMenuLayoutBuilder
     }
 
     static void Label(Transform parent, string name, string text, float size, FontStyles style, Color color,
-                      TextAlignmentOptions align, Vector2 anchor, Vector2 pos, Vector2 boxSize, float spacing = 0f)
+                      TextAlignmentOptions align, Vector2 anchor, Vector2 pos, Vector2 boxSize)
     {
         var rt = Rect(name, parent);
         Place(rt, anchor, pos, boxSize);
+
         var t = rt.gameObject.AddComponent<TextMeshProUGUI>();
         t.text = text;
         t.fontSize = size;
         t.fontStyle = style;
         t.color = color;
         t.alignment = align;
-        t.characterSpacing = spacing;
         t.raycastTarget = false;
     }
 }
