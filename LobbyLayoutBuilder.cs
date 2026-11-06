@@ -8,7 +8,7 @@ using TMPro;
 public static class LobbyLayoutBuilder
 {
     // ==================== PALET WARNA ====================
-    static readonly Color BgDark     = new Color(0.02f, 0.04f, 0.08f, 1f);
+    static readonly Color BgDark     = new Color(0.015f, 0.03f, 0.07f, 1f);
     static readonly Color PanelNavy  = new Color(0.02f, 0.08f, 0.2f, 0.88f);
     static readonly Color CyanGlow   = new Color(0.2f, 0.7f, 1f, 1f);
     static readonly Color Gold       = new Color(1f, 0.75f, 0.2f, 1f);
@@ -39,9 +39,14 @@ public static class LobbyLayoutBuilder
 
         var root = canvasGO.transform;
 
-        // Background
-        var bg = Img(root, "Background_Image", BgDark);
+        // ==================== BACKGROUND ====================
+        // Background utama (bisa diganti sprite nanti)
+        var bg = Img(root, "Background", BgDark);
         Stretch(bg.rectTransform);
+
+        // Overlay gelap biar lebih dalam (opsional)
+        var overlay = Img(root, "BackgroundOverlay", new Color(0, 0, 0, 0.25f));
+        Stretch(overlay.rectTransform);
 
         BuildProfile(root);
         BuildTopRight(root);
@@ -51,7 +56,7 @@ public static class LobbyLayoutBuilder
         BuildDeploy(root);
 
         Selection.activeGameObject = canvasGO;
-        Debug.Log("✅ Layout Final Selesai! Semua tombol & panel sudah memakai chamfer.");
+        Debug.Log("✅ Layout selesai! Ukuran sudah disesuaikan + Background ditambahkan.");
     }
 
     // =====================================================================
@@ -69,10 +74,6 @@ public static class LobbyLayoutBuilder
                 bool cutTL = (x + y) < cutSize;
                 bool cutBR = ((width - 1 - x) + (height - 1 - y)) < cutSize;
 
-                // Kalau mau 4 sudut, uncomment 2 baris di bawah:
-                // bool cutTR = ((width - 1 - x) + y) < cutSize;
-                // bool cutBL = (x + (height - 1 - y)) < cutSize;
-
                 if (cutTL || cutBR)
                     pixels[y * width + x] = Color.clear;
                 else
@@ -88,40 +89,39 @@ public static class LobbyLayoutBuilder
     }
 
     // =====================================================================
-    //  PANEL PROFIL (KIRI ATAS)
+    //  PANEL PROFIL (KIRI ATAS) - sedikit lebih kecil
     // =====================================================================
     static void BuildProfile(Transform root)
     {
-        var p = ChamferPanel(root, "ProfilePanel", new Vector2(450, 140), PanelNavy, 18);
-        Place(p, new Vector2(0, 1), new Vector2(30, -30), new Vector2(450, 140));
+        var p = ChamferPanel(root, "ProfilePanel", new Vector2(420, 130), PanelNavy, 16);
+        Place(p, new Vector2(0, 1), new Vector2(28, -28), new Vector2(420, 130));
 
-        // Avatar frame
-        var avatar = ChamferPanel(p, "AvatarFrame", new Vector2(110, 110), new Color(0.1f, 0.2f, 0.4f), 12);
-        Place(avatar, new Vector2(0, 1), new Vector2(15, -15), new Vector2(110, 110));
+        var avatar = ChamferPanel(p, "AvatarFrame", new Vector2(100, 100), new Color(0.1f, 0.2f, 0.4f), 12);
+        Place(avatar, new Vector2(0, 1), new Vector2(14, -14), new Vector2(100, 100));
 
-        Label(p, "NameText", "FamaLine", 28, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
-              new Vector2(0, 1), new Vector2(140, -15), new Vector2(280, 35));
+        Label(p, "NameText", "FamaLine", 26, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 1), new Vector2(130, -14), new Vector2(270, 32));
 
-        Label(p, "LevelText", "Lv. 12", 22, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
-              new Vector2(0, 1), new Vector2(140, -55), new Vector2(80, 30));
+        Label(p, "LevelText", "Lv. 12", 20, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 1), new Vector2(130, -50), new Vector2(80, 28));
 
         // EXP Bar
         var expBar = Img(p, "ExpBar_BG", new Color(0.1f, 0.15f, 0.3f));
-        Place(expBar.rectTransform, new Vector2(0, 1), new Vector2(215, -62), new Vector2(200, 10));
+        Place(expBar.rectTransform, new Vector2(0, 1), new Vector2(200, -56), new Vector2(190, 9));
 
         var expFill = Img(expBar.transform, "ExpBar_Fill", CyanGlow);
         expFill.rectTransform.anchorMin = Vector2.zero;
         expFill.rectTransform.anchorMax = new Vector2(0.36f, 1f);
         expFill.rectTransform.offsetMin = expFill.rectTransform.offsetMax = Vector2.zero;
 
-        Label(p, "ExpText", "EXP 720 / 2,000", 14, FontStyles.Normal, CyanGlow, TextAlignmentOptions.Left,
-              new Vector2(0, 1), new Vector2(215, -75), new Vector2(200, 20));
+        Label(p, "ExpText", "EXP 720 / 2,000", 13, FontStyles.Normal, CyanGlow, TextAlignmentOptions.Left,
+              new Vector2(0, 1), new Vector2(200, -68), new Vector2(190, 18));
 
         var rankIcon = Img(p, "RankIcon", Gold);
-        Place(rankIcon.rectTransform, new Vector2(0, 1), new Vector2(140, -95), new Vector2(30, 30));
+        Place(rankIcon.rectTransform, new Vector2(0, 1), new Vector2(130, -90), new Vector2(26, 26));
 
-        Label(p, "RankText", "Silver III", 20, FontStyles.Normal, Color.white, TextAlignmentOptions.Left,
-              new Vector2(0, 1), new Vector2(180, -95), new Vector2(150, 30));
+        Label(p, "RankText", "Silver III", 18, FontStyles.Normal, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 1), new Vector2(165, -90), new Vector2(150, 26));
     }
 
     // =====================================================================
@@ -129,8 +129,8 @@ public static class LobbyLayoutBuilder
     // =====================================================================
     static void BuildTopRight(Transform root)
     {
-        var g = Group(root, "TopRightGroup", true, 15, TextAnchor.MiddleRight);
-        Place(g, new Vector2(1, 1), new Vector2(-30, -40), new Vector2(600, 50));
+        var g = Group(root, "TopRightGroup", true, 12, TextAnchor.MiddleRight);
+        Place(g, new Vector2(1, 1), new Vector2(-28, -36), new Vector2(580, 46));
 
         CurrencyPill(g, "GemPill", "1,200", CyanGlow);
         CurrencyPill(g, "CoinPill", "15,340", Gold);
@@ -142,29 +142,29 @@ public static class LobbyLayoutBuilder
 
     static void CurrencyPill(Transform parent, string name, string value, Color iconColor)
     {
-        var p = ChamferPanel(parent, name, new Vector2(170, 42), PanelNavy, 10);
-        
+        var p = ChamferPanel(parent, name, new Vector2(158, 40), PanelNavy, 9);
+
         var icon = Img(p, "Icon", iconColor);
-        Place(icon.rectTransform, new Vector2(0, 0.5f), new Vector2(12, 0), new Vector2(24, 24));
+        Place(icon.rectTransform, new Vector2(0, 0.5f), new Vector2(11, 0), new Vector2(22, 22));
 
-        Label(p, "Value", value, 22, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
-              new Vector2(0, 0.5f), new Vector2(45, 0), new Vector2(80, 30));
+        Label(p, "Value", value, 20, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 0.5f), new Vector2(42, 0), new Vector2(75, 28));
 
-        Label(p, "Plus", "+", 26, FontStyles.Bold, CyanGlow, TextAlignmentOptions.Center,
-              new Vector2(1, 0.5f), new Vector2(-10, 0), new Vector2(30, 30));
+        Label(p, "Plus", "+", 24, FontStyles.Bold, CyanGlow, TextAlignmentOptions.Center,
+              new Vector2(1, 0.5f), new Vector2(-8, 0), new Vector2(28, 28));
     }
 
     static void IconButton(Transform parent, string name, bool hasBadge)
     {
-        var b = ChamferPanel(parent, name, new Vector2(48, 48), PanelNavy, 10);
+        var b = ChamferPanel(parent, name, new Vector2(44, 44), PanelNavy, 9);
 
         var icon = Img(b, "Icon", CyanGlow);
-        Place(icon.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(26, 26));
+        Place(icon.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(24, 24));
 
         if (hasBadge)
         {
             var dot = Img(b, "Badge", RedBadge);
-            Place(dot.rectTransform, new Vector2(1, 1), new Vector2(-2, -2), new Vector2(16, 16));
+            Place(dot.rectTransform, new Vector2(1, 1), new Vector2(-2, -2), new Vector2(14, 14));
         }
     }
 
@@ -174,35 +174,35 @@ public static class LobbyLayoutBuilder
     static void BuildLeftColumn(Transform root)
     {
         // New Agent Banner
-        var banner = ChamferPanel(root, "NewAgentBanner", new Vector2(400, 150), new Color(0.05f, 0.15f, 0.35f, 0.92f), 16);
-        Place(banner, new Vector2(0, 0), new Vector2(30, 360), new Vector2(400, 150));
+        var banner = ChamferPanel(root, "NewAgentBanner", new Vector2(380, 140), new Color(0.05f, 0.15f, 0.35f, 0.92f), 14);
+        Place(banner, new Vector2(0, 0), new Vector2(28, 340), new Vector2(380, 140));
 
         var charaArt = Img(banner, "AgentArt", new Color(1, 1, 1, 0));
-        Place(charaArt.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0), new Vector2(180, 150));
+        Place(charaArt.rectTransform, new Vector2(0, 0.5f), new Vector2(0, 0), new Vector2(165, 140));
 
-        Label(banner, "Title", "NEW AGENT\n\"VYRA\"", 26, FontStyles.Bold | FontStyles.Italic, Color.white, TextAlignmentOptions.Left,
-              new Vector2(1, 1), new Vector2(-15, -15), new Vector2(200, 60));
+        Label(banner, "Title", "NEW AGENT\n\"VYRA\"", 24, FontStyles.Bold | FontStyles.Italic, Color.white, TextAlignmentOptions.Left,
+              new Vector2(1, 1), new Vector2(-14, -14), new Vector2(190, 55));
 
-        var getBtn = ChamferPanel(banner, "GetNowButton", new Vector2(140, 36), new Color(0.1f, 0.4f, 0.9f), 10);
-        Place(getBtn, new Vector2(1, 0), new Vector2(-15, 15), new Vector2(140, 36));
-        Label(getBtn, "Text", "GET NOW »", 16, FontStyles.Bold, Color.white, TextAlignmentOptions.Center,
-              new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(140, 36));
+        var getBtn = ChamferPanel(banner, "GetNowButton", new Vector2(130, 34), new Color(0.1f, 0.4f, 0.9f), 9);
+        Place(getBtn, new Vector2(1, 0), new Vector2(-14, 14), new Vector2(130, 34));
+        Label(getBtn, "Text", "GET NOW »", 15, FontStyles.Bold, Color.white, TextAlignmentOptions.Center,
+              new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(130, 34));
 
         // Notice
-        var notice = ChamferPanel(root, "NoticePanel", new Vector2(400, 110), PanelNavy, 14);
-        Place(notice, new Vector2(0, 0), new Vector2(30, 230), new Vector2(400, 110));
+        var notice = ChamferPanel(root, "NoticePanel", new Vector2(380, 100), PanelNavy, 12);
+        Place(notice, new Vector2(0, 0), new Vector2(28, 220), new Vector2(380, 100));
 
         var iconNotice = Img(notice, "Icon", CyanGlow);
-        Place(iconNotice.rectTransform, new Vector2(0, 1), new Vector2(15, -15), new Vector2(24, 24));
+        Place(iconNotice.rectTransform, new Vector2(0, 1), new Vector2(14, -14), new Vector2(22, 22));
 
-        Label(notice, "Title", "NOTICE", 18, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
-              new Vector2(0, 1), new Vector2(50, -15), new Vector2(150, 24));
+        Label(notice, "Title", "NOTICE", 17, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 1), new Vector2(46, -14), new Vector2(140, 22));
 
-        Label(notice, "Body", "Maintenance will be on\nNov 10, 08:00 (UTC+7).", 16, FontStyles.Normal, new Color(0.8f, 0.9f, 1f), TextAlignmentOptions.Left,
-              new Vector2(0, 0), new Vector2(15, 15), new Vector2(320, 50));
+        Label(notice, "Body", "Maintenance will be on\nNov 10, 08:00 (UTC+7).", 15, FontStyles.Normal, new Color(0.8f, 0.9f, 1f), TextAlignmentOptions.Left,
+              new Vector2(0, 0), new Vector2(14, 14), new Vector2(300, 45));
 
-        Label(notice, "Arrow", ">", 24, FontStyles.Bold, CyanGlow, TextAlignmentOptions.Center,
-              new Vector2(1, 0.5f), new Vector2(-15, 0), new Vector2(30, 30));
+        Label(notice, "Arrow", ">", 22, FontStyles.Bold, CyanGlow, TextAlignmentOptions.Center,
+              new Vector2(1, 0.5f), new Vector2(-14, 0), new Vector2(28, 28));
     }
 
     // =====================================================================
@@ -211,67 +211,67 @@ public static class LobbyLayoutBuilder
     static void BuildRightColumn(Transform root)
     {
         // Daily Mission
-        var dm = ChamferPanel(root, "DailyMission", new Vector2(360, 100), PanelNavy, 14);
-        Place(dm, new Vector2(1, 1), new Vector2(-30, -100), new Vector2(360, 100));
+        var dm = ChamferPanel(root, "DailyMission", new Vector2(340, 92), PanelNavy, 12);
+        Place(dm, new Vector2(1, 1), new Vector2(-28, -95), new Vector2(340, 92));
 
         var dmi = Img(dm, "Icon", CyanGlow);
-        Place(dmi.rectTransform, new Vector2(0, 1), new Vector2(15, -15), new Vector2(24, 24));
+        Place(dmi.rectTransform, new Vector2(0, 1), new Vector2(14, -14), new Vector2(22, 22));
 
-        Label(dm, "Title", "DAILY MISSION", 18, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
-              new Vector2(0, 1), new Vector2(50, -15), new Vector2(200, 24));
+        Label(dm, "Title", "DAILY MISSION", 16, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 1), new Vector2(46, -14), new Vector2(180, 22));
 
-        Label(dm, "Progress", "0 / 3", 18, FontStyles.Bold, Color.white, TextAlignmentOptions.Right,
-              new Vector2(1, 1), new Vector2(-40, -15), new Vector2(80, 24));
+        Label(dm, "Progress", "0 / 3", 16, FontStyles.Bold, Color.white, TextAlignmentOptions.Right,
+              new Vector2(1, 1), new Vector2(-36, -14), new Vector2(70, 22));
 
-        Label(dm, "Desc", "Play 3 matches", 16, FontStyles.Normal, Color.white, TextAlignmentOptions.Left,
-              new Vector2(0, 1), new Vector2(15, -50), new Vector2(250, 24));
+        Label(dm, "Desc", "Play 3 matches", 15, FontStyles.Normal, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 1), new Vector2(14, -46), new Vector2(230, 22));
 
-        Label(dm, "Reward", "x100", 18, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
-              new Vector2(1, 0), new Vector2(-80, 15), new Vector2(60, 24));
+        Label(dm, "Reward", "x100", 16, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
+              new Vector2(1, 0), new Vector2(-75, 14), new Vector2(55, 22));
 
-        Label(dm, "Arrow", ">", 24, FontStyles.Bold, CyanGlow, TextAlignmentOptions.Center,
-              new Vector2(1, 0.5f), new Vector2(-15, 0), new Vector2(30, 30));
+        Label(dm, "Arrow", ">", 22, FontStyles.Bold, CyanGlow, TextAlignmentOptions.Center,
+              new Vector2(1, 0.5f), new Vector2(-14, 0), new Vector2(28, 28));
 
         // Season Rank
-        var sr = ChamferPanel(root, "SeasonRank", new Vector2(360, 120), PanelNavy, 14);
-        Place(sr, new Vector2(1, 1), new Vector2(-30, -215), new Vector2(360, 120));
+        var sr = ChamferPanel(root, "SeasonRank", new Vector2(340, 110), PanelNavy, 12);
+        Place(sr, new Vector2(1, 1), new Vector2(-28, -200), new Vector2(340, 110));
 
         var srIcon = Img(sr, "Icon_Badge", Gold);
-        Place(srIcon.rectTransform, new Vector2(0, 0.5f), new Vector2(40, 0), new Vector2(60, 60));
+        Place(srIcon.rectTransform, new Vector2(0, 0.5f), new Vector2(36, 0), new Vector2(54, 54));
 
-        Label(sr, "Label", "SEASON RANK", 14, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
-              new Vector2(0, 1), new Vector2(110, -18), new Vector2(200, 20));
+        Label(sr, "Label", "SEASON RANK", 13, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 1), new Vector2(105, -16), new Vector2(180, 18));
 
-        Label(sr, "RankName", "Bronze I", 24, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
-              new Vector2(0, 1), new Vector2(110, -45), new Vector2(200, 30));
+        Label(sr, "RankName", "Bronze I", 22, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 1), new Vector2(105, -40), new Vector2(180, 28));
 
-        Label(sr, "RankPoint", "0 / 1000", 14, FontStyles.Normal, CyanGlow, TextAlignmentOptions.Left,
-              new Vector2(0, 0), new Vector2(110, 18), new Vector2(150, 20));
+        Label(sr, "RankPoint", "0 / 1000", 13, FontStyles.Normal, CyanGlow, TextAlignmentOptions.Left,
+              new Vector2(0, 0), new Vector2(105, 16), new Vector2(140, 18));
 
-        Label(sr, "Arrow", ">", 24, FontStyles.Bold, CyanGlow, TextAlignmentOptions.Center,
-              new Vector2(1, 0.5f), new Vector2(-15, 0), new Vector2(30, 30));
+        Label(sr, "Arrow", ">", 22, FontStyles.Bold, CyanGlow, TextAlignmentOptions.Center,
+              new Vector2(1, 0.5f), new Vector2(-14, 0), new Vector2(28, 28));
 
         // New Map
-        var nm = ChamferPanel(root, "NewMap", new Vector2(360, 150), new Color(0.05f, 0.1f, 0.2f), 14);
-        Place(nm, new Vector2(1, 0), new Vector2(-30, 170), new Vector2(360, 150));
+        var nm = ChamferPanel(root, "NewMap", new Vector2(340, 140), new Color(0.05f, 0.1f, 0.2f), 12);
+        Place(nm, new Vector2(1, 0), new Vector2(-28, 160), new Vector2(340, 140));
 
         var mapArt = Img(nm, "MapArt", new Color(0.1f, 0.2f, 0.4f));
         Stretch(mapArt.rectTransform, 4);
 
-        Label(nm, "Tag", "NEW MAP", 14, FontStyles.Bold, Gold, TextAlignmentOptions.Left,
-              new Vector2(0, 0), new Vector2(15, 42), new Vector2(200, 20));
+        Label(nm, "Tag", "NEW MAP", 13, FontStyles.Bold, Gold, TextAlignmentOptions.Left,
+              new Vector2(0, 0), new Vector2(14, 38), new Vector2(180, 18));
 
-        Label(nm, "MapName", "RESEARCH FACILITY »", 20, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
-              new Vector2(0, 0), new Vector2(15, 15), new Vector2(300, 26));
+        Label(nm, "MapName", "RESEARCH FACILITY »", 18, FontStyles.Bold, Color.white, TextAlignmentOptions.Left,
+              new Vector2(0, 0), new Vector2(14, 14), new Vector2(280, 24));
     }
 
     // =====================================================================
-    //  BOTTOM BAR
+    //  BOTTOM BAR (ukuran lebih pas)
     // =====================================================================
     static void BuildBottomBar(Transform root)
     {
-        var g = Group(root, "BottomBarGroup", true, 12, TextAnchor.LowerLeft);
-        Place(g, new Vector2(0, 0), new Vector2(30, 30), new Vector2(1100, 100));
+        var g = Group(root, "BottomBarGroup", true, 11, TextAnchor.LowerLeft);
+        Place(g, new Vector2(0, 0), new Vector2(28, 28), new Vector2(1050, 92));
 
         MenuButton(g, "Operations", "OPERATIONS", "Play Missions", true, true);
         MenuButton(g, "Agents", "AGENTS", "Select Character", false, false);
@@ -286,40 +286,38 @@ public static class LobbyLayoutBuilder
         Color baseColor = isActive ? ActiveBlue : PanelNavy;
 
         var container = Rect(name + "_Container", parent);
-        container.sizeDelta = new Vector2(160, 100);
+        container.sizeDelta = new Vector2(148, 92);          // ← ukuran lebih pas
 
-        // Chamfer sprite
-        var sprite = CreateChamferedSprite(160, 100, 22);
+        var sprite = CreateChamferedSprite(148, 92, 20);
         var bgImg = container.gameObject.AddComponent<Image>();
         bgImg.sprite = sprite;
         bgImg.color = baseColor;
         bgImg.type = Image.Type.Simple;
         bgImg.raycastTarget = true;
 
-        // Outline
         var outline = container.gameObject.AddComponent<Outline>();
         outline.effectColor = new Color(0.25f, 0.65f, 1f, 0.75f);
         outline.effectDistance = new Vector2(2, -2);
 
         // Accent line
         var line = Img(container, "AccentLine", isActive ? CyanGlow : new Color(0.2f, 0.5f, 1f, 0.55f));
-        Place(line.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -3), new Vector2(120, 4));
+        Place(line.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -3), new Vector2(110, 3));
 
         // Icon
         var icon = Img(container, "Icon", isActive ? Color.white : CyanGlow);
-        Place(icon.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -22), new Vector2(36, 36));
+        Place(icon.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -20), new Vector2(32, 32));
 
         // Texts
-        Label(container, "Title", title, 17, FontStyles.Bold, Color.white, TextAlignmentOptions.Center,
-              new Vector2(0.5f, 0), new Vector2(0, 34), new Vector2(150, 24));
+        Label(container, "Title", title, 16, FontStyles.Bold, Color.white, TextAlignmentOptions.Center,
+              new Vector2(0.5f, 0), new Vector2(0, 30), new Vector2(140, 22));
 
-        Label(container, "Sub", sub, 13, FontStyles.Normal, CyanGlow, TextAlignmentOptions.Center,
-              new Vector2(0.5f, 0), new Vector2(0, 13), new Vector2(150, 20));
+        Label(container, "Sub", sub, 12, FontStyles.Normal, CyanGlow, TextAlignmentOptions.Center,
+              new Vector2(0.5f, 0), new Vector2(0, 12), new Vector2(140, 18));
 
         if (hasBadge)
         {
             var dot = Img(container, "Badge", RedBadge);
-            Place(dot.rectTransform, new Vector2(0.82f, 1), new Vector2(0, -6), new Vector2(16, 16));
+            Place(dot.rectTransform, new Vector2(0.82f, 1), new Vector2(0, -5), new Vector2(14, 14));
         }
 
         var btn = container.gameObject.AddComponent<Button>();
@@ -331,17 +329,17 @@ public static class LobbyLayoutBuilder
     // =====================================================================
     static void BuildDeploy(Transform root)
     {
-        var d = ChamferPanel(root, "DeployButton", new Vector2(400, 110), new Color(0.1f, 0.4f, 0.95f), 18);
-        Place(d, new Vector2(1, 0), new Vector2(-30, 50), new Vector2(400, 110));
+        var d = ChamferPanel(root, "DeployButton", new Vector2(380, 100), new Color(0.1f, 0.4f, 0.95f), 16);
+        Place(d, new Vector2(1, 0), new Vector2(-28, 48), new Vector2(380, 100));
 
         var topLine = Img(d, "TopLine", CyanGlow);
-        Place(topLine.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -2), new Vector2(380, 5));
+        Place(topLine.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -2), new Vector2(360, 4));
 
-        Label(d, "Title", "DEPLOY »", 48, FontStyles.Bold | FontStyles.Italic, Color.white, TextAlignmentOptions.Center,
-              new Vector2(0.5f, 1), new Vector2(0, -12), new Vector2(380, 60));
+        Label(d, "Title", "DEPLOY »", 44, FontStyles.Bold | FontStyles.Italic, Color.white, TextAlignmentOptions.Center,
+              new Vector2(0.5f, 1), new Vector2(0, -10), new Vector2(360, 55));
 
-        Label(d, "Sub", "ENTER THE BATTLEFIELD", 16, FontStyles.Bold, CyanGlow, TextAlignmentOptions.Center,
-              new Vector2(0.5f, 0), new Vector2(0, 16), new Vector2(380, 24));
+        Label(d, "Sub", "ENTER THE BATTLEFIELD", 15, FontStyles.Bold, CyanGlow, TextAlignmentOptions.Center,
+              new Vector2(0.5f, 0), new Vector2(0, 14), new Vector2(360, 22));
     }
 
     // =====================================================================
