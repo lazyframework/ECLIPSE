@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using UnityEditor;
 using TMPro;
+using System.IO;
 
 /// <summary>
 /// Letakkan di Assets/Editor/ (bersama ChamferGraphic.cs di Assets/Scripts/).
@@ -35,10 +36,11 @@ public static class MainMenuLayoutBuilder
         var canvasGO = new GameObject("MainMenuCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         Undo.RegisterCreatedObjectUndo(canvasGO, "Build Main Menu Layout");
         canvasGO.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+        
         var scaler = canvasGO.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920, 1080);
-        scaler.matchWidthOrHeight = 0.5f;
+        scaler.matchWidthOrHeight = 0.5f; // Kunci rasio tengah
 
 #if UNITY_2023_1_OR_NEWER
         bool hasES = Object.FindFirstObjectByType<EventSystem>() != null;
@@ -53,8 +55,27 @@ public static class MainMenuLayoutBuilder
 
         var root = canvasGO.transform;
 
-        var bg = Img(root, "Background", new Color(0.01f, 0.02f, 0.06f, 1f));
-        Stretch(bg.rectTransform);
+        // ==================== BACKGROUND DARI ASSETS/ART ====================
+        var bg = Img(root, "Background_Art", new Color(0.01f, 0.02f, 0.06f, 1f));
+        Stretch(bg.rectTransform); // Full screen di semua rasio
+
+        // Mencoba memuat gambar otomatis dari folder Assets/Art
+        Sprite bgSprite = LoadBackgroundSprite();
+        if (bgSprite != null)
+        {
+            bg.sprite = bgSprite;
+            bg.color = Color.white;
+            bg.type = Image.Type.Simple;
+            bg.preserveAspect = false; // Biarkan stretch mengisi layar
+        }
+        else
+        {
+            Debug.LogWarning("Gambar background tidak ditemukan di Assets/Art. Menggunakan warna solid gelap.");
+        }
+
+        // Overlay gelap agar UI di atasnya lebih terbaca
+        var overlay = Img(root, "Overlay", new Color(0, 0, 0, 0.3f));
+        Stretch(overlay.rectTransform);
 
         BuildFrameLines(root);
         BuildProfile(root);
@@ -65,7 +86,29 @@ public static class MainMenuLayoutBuilder
               TextAlignmentOptions.Left, new Vector2(0, 0), new Vector2(46, 20), new Vector2(400, 22));
 
         Selection.activeGameObject = canvasGO;
-        Debug.Log("Main menu layout selesai. Isi sprite di Background (gambar tanpa UI), avatar, dan objek 'Icon'.");
+        Debug.Log("Main menu layout selesai. Cek folder Assets/Art untuk background.");
+    }
+
+    // Fungsi untuk mencari gambar di Assets/Art
+    static Sprite LoadBackgroundSprite()
+    {
+        string artPath = "Assets/Art";
+        if (!AssetDatabase.IsValidFolder(artPath)) return null;
+
+        // Mencari semua gambar di folder Art
+        string[] guids = AssetDatabase.FindAssets("t:Texture2D", new[] { artPath });
+        if (guids.Length == 0) return null;
+
+        // Ambil gambar pertama yang ditemukan sebagai background
+        string path = AssetDatabase.GUIDToAssetPath(guids[0]);
+        TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+        if (importer != null && importer.textureType != TextureImporterType.Sprite)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.SaveAndReimport();
+        }
+
+        return AssetDatabase.LoadAssetAtPath<Sprite>(path);
     }
 
     // =====================================================================
@@ -79,8 +122,11 @@ public static class MainMenuLayoutBuilder
 
     static void FrameLine(Transform root, string name, Vector2 anchor, float y)
     {
+        // Garis tipis di tengah
         var line = Img(root, name, Line);
         Place(line.rectTransform, anchor, new Vector2(0, y), new Vector2(1780, 1));
+        
+        // Ujung garis (Ticks)
         for (int i = 0; i < 2; i++)
         {
             float x = i == 0 ? -890f : 890f;
@@ -121,77 +167,98 @@ public static class MainMenuLayoutBuilder
     }
 
     // =====================================================================
-    //  STATUS KANAN ATAS
+    //  STATUS KANAN ATAS (RESPONSIVE)
     // =====================================================================
     static void BuildTopRight(Transform root)
     {
-        var g = Group(root, "TopRight", true, 6, TextAnchor.MiddleRight);
+        // Pakai HorizontalLayoutGroup, tapi elemennya diberi LayoutElement agar tidak melar
+        var g = Group(root, "TopRight", true, 8, TextAnchor.MiddleRight);
         Place(g, new Vector2(1, 1), new Vector2(-50, -50), new Vector2(700, 48));
 
-        // Signal
-        var sig = InfoBox(g, "SignalBox", 190);
-        for (int i = 0; i < 4; i++)
-        {
-            float h = 6f + 4f * i;
-            var bar = Img(sig, "Bar" + i, Cyan);
-            Place(bar.rectTransform, new Vector2(0, 0.5f), new Vector2(14 + i * 7, -9 + h / 2f), new Vector2(4, h));
-        }
-        Label(sig, "Text", "SIGNAL 4 BARS", 15, FontStyles.Normal, Dim, TextAlignmentOptions.Left,
-              new Vector2(0, 0.5f), new Vector2(50, 0), new Vector2(130, 24));
-
-        // VP
-        var vp = InfoBox(g, "VPBox", 180);
-        var vpIcon = Img(vp, "Icon", Cyan);
-        Place(vpIcon.rectTransform, new Vector2(0, 0.5f), new Vector2(14, 0), new Vector2(22, 22));
-        Label(vp, "Text", "<color=#8FA9D6>VP</color>  <b>1,200</b>", 18, FontStyles.Normal, Color.white,
-              TextAlignmentOptions.Left, new Vector2(0, 0.5f), new Vector2(44, 0), new Vector2(130, 26));
-
-        // Coins
-        var coin = InfoBox(g, "CoinBox", 210);
-        var coinIcon = Img(coin, "Icon", new Color(0.30f, 0.55f, 1f, 1f));
-        Place(coinIcon.rectTransform, new Vector2(0, 0.5f), new Vector2(14, 0), new Vector2(22, 22));
-        Label(coin, "Text", "<color=#8FA9D6>COINS</color>  <b>15,340</b>", 18, FontStyles.Normal, Color.white,
-              TextAlignmentOptions.Left, new Vector2(0, 0.5f), new Vector2(44, 0), new Vector2(160, 26));
-
-        // Lonceng & profil
+        InfoBox(g, "SignalBox", 190);
+        InfoBox(g, "VPBox", 180);
+        InfoBox(g, "CoinBox", 210);
         SquareIconButton(g, "NotificationButton");
         SquareIconButton(g, "ProfileButton");
     }
 
     static RectTransform InfoBox(Transform parent, string name, float width)
     {
-        return Shape(parent, name, new Vector2(width, 48), PanelFill, BorderThin, 0, 0, false, 1f);
+        var rt = Shape(parent, name, new Vector2(width, 48), PanelFill, BorderThin, 0, 0, false, 1f);
+        
+        // Mencegah kotak melar
+        var le = rt.gameObject.AddComponent<LayoutElement>();
+        le.preferredWidth = width;
+        le.preferredHeight = 48;
+        le.flexibleWidth = 0;
+
+        if (name == "SignalBox") {
+            for (int i = 0; i < 4; i++) {
+                float h = 6f + 4f * i;
+                var bar = Img(rt, "Bar" + i, Cyan);
+                Place(bar.rectTransform, new Vector2(0, 0.5f), new Vector2(14 + i * 7, -9 + h / 2f), new Vector2(4, h));
+            }
+            Label(rt, "Text", "SIGNAL 4 BARS", 15, FontStyles.Normal, Dim, TextAlignmentOptions.Left,
+                  new Vector2(0, 0.5f), new Vector2(50, 0), new Vector2(130, 24));
+        }
+        else if (name == "VPBox") {
+            var vpIcon = Img(rt, "Icon", Cyan);
+            Place(vpIcon.rectTransform, new Vector2(0, 0.5f), new Vector2(14, 0), new Vector2(22, 22));
+            Label(rt, "Text", "<color=#8FA9D6>VP</color>  <b>1,200</b>", 18, FontStyles.Normal, Color.white,
+                  TextAlignmentOptions.Left, new Vector2(0, 0.5f), new Vector2(44, 0), new Vector2(130, 26));
+        }
+        else if (name == "CoinBox") {
+            var coinIcon = Img(rt, "Icon", new Color(0.30f, 0.55f, 1f, 1f));
+            Place(coinIcon.rectTransform, new Vector2(0, 0.5f), new Vector2(14, 0), new Vector2(22, 22));
+            Label(rt, "Text", "<color=#8FA9D6>COINS</color>  <b>15,340</b>", 18, FontStyles.Normal, Color.white,
+                  TextAlignmentOptions.Left, new Vector2(0, 0.5f), new Vector2(44, 0), new Vector2(160, 26));
+        }
+        
+        return rt;
     }
 
     static void SquareIconButton(Transform parent, string name)
     {
         var b = Shape(parent, name, new Vector2(48, 48), PanelFill, BorderThin, 0, 0, true, 1f);
+        
+        var le = b.gameObject.AddComponent<LayoutElement>();
+        le.preferredWidth = 48;
+        le.preferredHeight = 48;
+        le.flexibleWidth = 0;
+
         var icon = Img(b, "Icon", Dim);
         Place(icon.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(22, 22));
     }
 
     // =====================================================================
-    //  TOMBOL BAWAH
+    //  TOMBOL BAWAH (RESPONSIVE)
     // =====================================================================
     static void BuildBottomMenu(Transform root)
     {
         var g = Group(root, "BottomMenu", true, 22, TextAnchor.MiddleCenter);
         Place(g, new Vector2(0.5f, 0), new Vector2(0, 60), new Vector2(1540, 64));
 
-        MenuButton(g, "ShopButton", "SHOP", false);
-        MenuButton(g, "SettingsButton", "SETTINGS", false);
-        MenuButton(g, "QuitButton", "QUIT", false);
-        MenuButton(g, "CharacterButton", "CHARACTER", false);
-        MenuButton(g, "InventoryButton", "INVENTORY", false);
-        MenuButton(g, "StartButton", "START", true);
+        MenuButton(g, "ShopButton", "SHOP", false, 220);
+        MenuButton(g, "SettingsButton", "SETTINGS", false, 220);
+        MenuButton(g, "QuitButton", "QUIT", false, 220);
+        MenuButton(g, "CharacterButton", "CHARACTER", false, 220);
+        MenuButton(g, "InventoryButton", "INVENTORY", false, 220);
+        MenuButton(g, "StartButton", "START", true, 260); // START lebih lebar
     }
 
-    static void MenuButton(Transform parent, string name, string text, bool primary)
+    static void MenuButton(Transform parent, string name, string text, bool primary, float width)
     {
-        var b = Shape(parent, name, new Vector2(232, 64),
+        var b = Shape(parent, name, new Vector2(width, 64),
                       primary ? StartFill : BtnFill, primary ? StartBorder : BtnBorder, 18, 18, true, primary ? 0f : 1.5f);
+        
+        // Kunci ukuran agar tidak melar saat layar lebar
+        var le = b.gameObject.AddComponent<LayoutElement>();
+        le.preferredWidth = width;
+        le.preferredHeight = 64;
+        le.flexibleWidth = 0;
+
         Label(b, "Text", text, 22, FontStyles.Bold, Color.white, TextAlignmentOptions.Center,
-              new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(220, 30), 1f);
+              new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(width - 10, 30), 1f);
     }
 
     // =====================================================================
@@ -228,7 +295,6 @@ public static class MainMenuLayoutBuilder
         return img;
     }
 
-    // Bentuk dengan garis tepi (outer = border, inner = fill). Sudut kiri-atas / kanan-bawah bisa dipotong.
     static RectTransform Shape(Transform parent, string name, Vector2 size, Color fill, Color border,
                                float cutTL, float cutBR, bool clickable, float thickness)
     {
