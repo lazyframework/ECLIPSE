@@ -1,18 +1,15 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
-using UnityEngine.EventSystems;
 using TMPro;
 
 public enum At { TL, TR, BL, BR, BC }
 
 public class LobbyBuilder : MonoBehaviour
 {
-    [Header("Assets (JANGAN masukkan logo/teks PROJECT ECLIPSE)")]
+    [Header("Assets (logo & teks PROJECT ECLIPSE TIDAK dibuat)")]
     public Sprite background;       // Ruangan + globe, TANPA karakter & UI
     public Sprite character;        // Karakter PNG transparan
-    public Sprite panelSprite;      // 9-slice panel sudut chamfer biru
-    public Sprite buttonSprite;     // 9-slice button (dipakai SEMUA tombol)
     public Sprite avatar, agentBanner, mapBanner, rankIcon;
     public Sprite gemIcon, coinIcon, bellIcon, friendsIcon, settingsIcon, speakerIcon;
     public Sprite[] navIcons = new Sprite[6];
@@ -22,15 +19,19 @@ public class LobbyBuilder : MonoBehaviour
     public Color accent = new Color(0.20f, 0.55f, 1f);
     public Color accentBright = new Color(0.45f, 0.85f, 1f);
     public Color panelColor = new Color(0.03f, 0.08f, 0.17f, 0.85f);
+    public Color borderColor = new Color(0.30f, 0.70f, 1f, 1f);
     public Color textMain = Color.white;
     public Color textDim = new Color(0.70f, 0.82f, 1f);
     public Color alert = new Color(1f, 0.2f, 0.2f);
+
+    [Header("Bentuk (clip path)")]
+    public float chamfer = 16f;
+    public float borderWidth = 2f;
 
     const float W = 1920f, H = 1080f;
 
     // ================= ENTRY POINT =================
 
-    // Dipanggil dari Editor (tombol BUILD) atau dari kode saat runtime
     public void Build()
     {
         Clear();
@@ -79,8 +80,7 @@ public class LobbyBuilder : MonoBehaviour
         var clip = Fill("BackgroundClip", root);
         clip.gameObject.AddComponent<RectMask2D>();
         var bg = Pin("Background", clip, new Vector2(.5f, .5f), new Vector2(.5f, .5f), Vector2.zero, Vector2.one);
-        var img = Img(bg, background);
-        img.preserveAspect = false;
+        Img(bg, background).preserveAspect = false;
         bg.gameObject.AddComponent<CoverFit>().Init(background);
     }
 
@@ -116,7 +116,7 @@ public class LobbyBuilder : MonoBehaviour
 
         var ban = Place("AgentBanner", s, At.TL, new Vector2(34, 425), new Vector2(430, 172));
         Img(ban, agentBanner).preserveAspect = false;
-        Btn(Place("GetNow", ban, At.BR, new Vector2(16, 16), new Vector2(160, 52)), "GET NOW »", null, null, true, 20);
+        Btn(Place("GetNow", ban, At.BR, new Vector2(16, 16), new Vector2(160, 52)), "GET NOW »", null, null, true, 18);
 
         var notice = Place("Notice", s, At.TL, new Vector2(34, 618), new Vector2(430, 126));
         Panel(notice);
@@ -158,10 +158,13 @@ public class LobbyBuilder : MonoBehaviour
         string[] titles = { "OPERATIONS", "AGENTS", "ARMORY", "INVENTORY", "STORE", "SETTINGS" };
         string[] subs   = { "Play Missions", "Select Character", "Upgrade Weapons", "Manage Items", "Buy Items", "Game Settings" };
 
+        // Ukuran lebih kecil dan jarak antar tombol lebih lebar
+        const float navW = 180f, navH = 104f, gap = 26f, startX = 34f, navY = 47f;
+
         for (int i = 0; i < 6; i++)
         {
-            var rt = Place("Nav_" + titles[i], s, At.BL, new Vector2(34 + i * 228, 47), new Vector2(212, 128));
-            Btn(rt, titles[i], subs[i], navIcons[i], i == 0);
+            var rt = Place("Nav_" + titles[i], s, At.BL, new Vector2(startX + i * (navW + gap), navY), new Vector2(navW, navH));
+            Btn(rt, titles[i], subs[i], navIcons[i], i == 0, 17f, 12f);
             if (i == 0) Badge(rt);
         }
 
@@ -171,20 +174,18 @@ public class LobbyBuilder : MonoBehaviour
 
     // ================= BUILDING BLOCKS =================
 
-    // Tombol: SATU style untuk semua. Hanya "filled" yang berbeda.
-    Button Btn(RectTransform rt, string title, string sub, Sprite icon, bool filled = false, float titleSize = 22f, float subSize = 15f)
+    // Tombol: SATU style untuk semua (clip path + border). Hanya "filled" yang berbeda.
+    Button Btn(RectTransform rt, string title, string sub, Sprite icon, bool filled = false, float titleSize = 18f, float subSize = 13f)
     {
-        var img = rt.gameObject.AddComponent<Image>();
-        img.sprite = buttonSprite;
-        img.type = buttonSprite ? Image.Type.Sliced : Image.Type.Simple;
-        img.color = filled ? accent : panelColor;
+        var g = Shape(rt, filled ? accent : panelColor);
+        g.raycastTarget = true;
 
         var btn = rt.gameObject.AddComponent<Button>();
-        btn.targetGraphic = img;
+        btn.targetGraphic = g;
         var cb = btn.colors;
-        cb.normalColor = img.color;
-        cb.highlightedColor = Color.Lerp(img.color, accentBright, 0.45f);
-        cb.pressedColor = Color.Lerp(img.color, Color.black, 0.25f);
+        cb.normalColor = g.color;
+        cb.highlightedColor = Color.Lerp(g.color, accentBright, 0.45f);
+        cb.pressedColor = Color.Lerp(g.color, Color.black, 0.25f);
         cb.selectedColor = cb.highlightedColor;
         cb.disabledColor = new Color(0.4f, 0.4f, 0.4f, 0.6f);
         cb.colorMultiplier = 1f;
@@ -197,25 +198,25 @@ public class LobbyBuilder : MonoBehaviour
         if (icon)
         {
             var ir = Pin("Icon", rt,
-                iconOnly ? new Vector2(.5f, .5f) : new Vector2(.5f, .8f),
+                iconOnly ? new Vector2(.5f, .5f) : new Vector2(.5f, .78f),
                 new Vector2(.5f, .5f), Vector2.zero,
-                iconOnly ? new Vector2(30, 30) : new Vector2(34, 34));
+                iconOnly ? new Vector2(28, 28) : new Vector2(32, 32));
             Img(ir, icon);
         }
 
         if (!iconOnly)
         {
             var tr = Fill("Title", rt, 8, 0, 8, 0);
-            tr.anchorMin = new Vector2(0, hasSub ? .40f : .15f);
-            tr.anchorMax = new Vector2(1, hasSub ? .66f : .85f);
+            tr.anchorMin = new Vector2(0, hasSub ? .36f : .15f);
+            tr.anchorMax = new Vector2(1, hasSub ? .62f : .85f);
             Txt(tr, title, titleSize, textMain, TextAlignmentOptions.Center, FontStyles.Bold);
         }
 
         if (hasSub)
         {
             var sr = Fill("Sub", rt, 8, 0, 8, 0);
-            sr.anchorMin = new Vector2(0, .12f);
-            sr.anchorMax = new Vector2(1, .36f);
+            sr.anchorMin = new Vector2(0, .10f);
+            sr.anchorMax = new Vector2(1, .34f);
             Txt(sr, sub, subSize, textDim, TextAlignmentOptions.Center);
         }
         return btn;
@@ -234,7 +235,7 @@ public class LobbyBuilder : MonoBehaviour
         Img(Pin("Icon", r, new Vector2(0, .5f), new Vector2(0, .5f), new Vector2(12, 0), new Vector2(30, 30)), icon);
         var vr = Fill("Value", r, 50, 0, 50, 0);
         Txt(vr, value, 22, textMain, TextAlignmentOptions.Left, FontStyles.Bold);
-        Btn(Pin("Plus", r, new Vector2(1, .5f), new Vector2(1, .5f), new Vector2(-6, 0), new Vector2(40, 40)), "+", null, null);
+        Btn(Pin("Plus", r, new Vector2(1, .5f), new Vector2(1, .5f), new Vector2(-6, 0), new Vector2(40, 40)), "+", null, null, false, 20);
     }
 
     void Badge(RectTransform host)
@@ -243,14 +244,27 @@ public class LobbyBuilder : MonoBehaviour
         Img(b, null, alert);
     }
 
-    Image Panel(RectTransform rt, Color? tint = null)
+    // Panel: clip path yang sama, tanpa interaksi
+    ChamferedGraphic Panel(RectTransform rt, Color? tint = null)
     {
-        var img = rt.gameObject.AddComponent<Image>();
-        img.sprite = panelSprite;
-        img.type = panelSprite ? Image.Type.Sliced : Image.Type.Simple;
-        img.color = tint ?? panelColor;
-        img.raycastTarget = false;
-        return img;
+        var g = Shape(rt, tint ?? panelColor);
+        g.raycastTarget = false;
+        return g;
+    }
+
+    // Membuat bentuk clip path dengan parameter tema
+    ChamferedGraphic Shape(RectTransform rt, Color fill)
+    {
+        var g = rt.gameObject.AddComponent<ChamferedGraphic>();
+        g.color = fill;
+        g.chamfer = chamfer;
+        g.border = borderWidth;
+        g.borderColor = borderColor;
+        g.cutTL = true;
+        g.cutBR = true;
+        g.cutTR = false;
+        g.cutBL = false;
+        return g;
     }
 
     Image Img(RectTransform rt, Sprite s, Color? tint = null)
@@ -325,24 +339,5 @@ public class LobbyBuilder : MonoBehaviour
         rt.anchorMin = new Vector2(r.xMin / Screen.width, r.yMin / Screen.height);
         rt.anchorMax = new Vector2(r.xMax / Screen.width, r.yMax / Screen.height);
         rt.offsetMin = rt.offsetMax = Vector2.zero;
-    }
-}
-
-// Background "cover": mengisi layar tanpa distorsi. ExecuteAlways agar jalan di Editor.
-[ExecuteAlways]
-public class CoverFit : MonoBehaviour
-{
-    Sprite sprite;
-    RectTransform rt;
-
-    public void Init(Sprite s) { sprite = s; rt = (RectTransform)transform; }
-
-    void LateUpdate()
-    {
-        if (!sprite || rt == null || rt.parent == null) return;
-        var pr = ((RectTransform)rt.parent).rect;
-        float ar = sprite.rect.width / sprite.rect.height;
-        float pa = pr.width / pr.height;
-        rt.sizeDelta = pa > ar ? new Vector2(pr.width, pr.width / ar) : new Vector2(pr.height * ar, pr.height);
     }
 }
