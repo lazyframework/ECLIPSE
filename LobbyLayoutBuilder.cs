@@ -7,20 +7,19 @@ using TMPro;
 
 public static class LobbyLayoutBuilder
 {
-    // Palet Warna Persis Gambar
+    // Palet Warna
     static readonly Color BgDark = new Color(0.02f, 0.04f, 0.08f, 1f);
     static readonly Color PanelNavy = new Color(0.02f, 0.08f, 0.2f, 0.85f);
     static readonly Color CyanGlow = new Color(0.2f, 0.7f, 1f, 1f);
     static readonly Color Gold = new Color(1f, 0.75f, 0.2f, 1f);
     static readonly Color RedBadge = new Color(0.9f, 0.1f, 0.1f, 1f);
 
-    [MenuItem("Tools/Lobby/Build Lobby Layout (Fix Miring)")]
+    [MenuItem("Tools/Lobby/Build Lobby Layout (Final Clipath)")]
     public static void Build()
     {
         var old = GameObject.Find("LobbyCanvas");
         if (old) Undo.DestroyObjectImmediate(old);
 
-        // 1. Canvas Setup
         var canvasGO = new GameObject("LobbyCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         Undo.RegisterCreatedObjectUndo(canvasGO, "Build Lobby Layout");
         var canvas = canvasGO.GetComponent<Canvas>();
@@ -37,11 +36,9 @@ public static class LobbyLayoutBuilder
 
         var root = canvasGO.transform;
 
-        // 2. Background Dasar
         var bg = Img(root, "Background_Image", BgDark);
         Stretch(bg.rectTransform); 
 
-        // 3. Bangun Komponen UI
         BuildProfile(root);
         BuildTopRight(root);
         BuildLeftColumn(root);
@@ -50,7 +47,7 @@ public static class LobbyLayoutBuilder
         BuildDeploy(root);
 
         Selection.activeGameObject = canvasGO;
-        Debug.Log("Layout Selesai! Bentuk miring sudah diterapkan menggunakan trik rotasi UI.");
+        Debug.Log("Layout Final Selesai! Sudut sudah tumpul (chamfer).");
     }
 
     // =====================================================================
@@ -146,7 +143,7 @@ public static class LobbyLayoutBuilder
     }
 
     // =====================================================================
-    //  KOLOM KANAN
+    //  KOLOM KANAN (MISI, RANK, NEW MAP - DINAIKKAN)
     // =====================================================================
     static void BuildRightColumn(Transform root)
     {
@@ -169,8 +166,9 @@ public static class LobbyLayoutBuilder
         Label(sr, "RankPoint", "0 / 1000", 14, FontStyles.Normal, CyanGlow, TextAlignmentOptions.Left, new Vector2(0, 0), new Vector2(90, 15), new Vector2(150, 20));
         Label(sr, "Arrow", ">", 24, FontStyles.Bold, CyanGlow, TextAlignmentOptions.Center, new Vector2(1, 0.5f), new Vector2(-15, 0), new Vector2(30, 30));
 
+        // NEW MAP DINAIKKAN (Y dari 150 diubah jadi 170)
         var nm = Panel(root, "NewMap", new Vector2(360, 150), new Color(0.05f, 0.1f, 0.2f));
-        Place(nm, new Vector2(1, 0), new Vector2(-30, 150), new Vector2(360, 150));
+        Place(nm, new Vector2(1, 0), new Vector2(-30, 170), new Vector2(360, 150)); 
         var mapArt = Img(nm, "MapArt", new Color(0.1f, 0.2f, 0.4f)); 
         Stretch(mapArt.rectTransform, 2);
         Label(nm, "Tag", "NEW MAP", 14, FontStyles.Bold, Gold, TextAlignmentOptions.Left, new Vector2(0, 0), new Vector2(15, 40), new Vector2(200, 20));
@@ -178,13 +176,12 @@ public static class LobbyLayoutBuilder
     }
 
     // =====================================================================
-    //  TOMBOL MENU BAWAH (DENGAN TRIK BENTUK MIRING)
+    //  TOMBOL MENU BAWAH (BENTUK CHAMFER/CLIPATH TUMPUL)
     // =====================================================================
     static void BuildBottomBar(Transform root)
     {
-        // Group dibuat lebih lebar agar tombol tidak dempet
-        var g = Group(root, "BottomBarGroup", true, 15, TextAnchor.LowerLeft);
-        Place(g, new Vector2(0, 0), new Vector2(30, 30), new Vector2(1100, 110));
+        var g = Group(root, "BottomBarGroup", true, 12, TextAnchor.LowerLeft);
+        Place(g, new Vector2(0, 0), new Vector2(30, 30), new Vector2(1100, 100));
 
         MenuButton(g, "Operations", "OPERATIONS", "Play Missions", true, true);
         MenuButton(g, "Agents", "AGENTS", "Select Character", false, false);
@@ -196,58 +193,69 @@ public static class LobbyLayoutBuilder
 
     static void MenuButton(Transform parent, string name, string title, string sub, bool isActive, bool hasBadge)
     {
-        Color baseColor = isActive ? new Color(0.05f, 0.3f, 0.8f, 0.9f) : new Color(0.02f, 0.08f, 0.2f, 0.9f);
+        Color baseColor = isActive ? new Color(0.05f, 0.3f, 0.8f, 0.9f) : PanelNavy;
         
-        // Parent kosong untuk menampung tombol yang dirotasi
-        var holder = Rect(name + "_Holder", parent);
-        holder.sizeDelta = new Vector2(160, 100);
+        // 1. Container dengan Mask untuk memotong sudut
+        var container = Rect(name + "_Container", parent);
+        container.sizeDelta = new Vector2(160, 100);
+        var mask = container.gameObject.AddComponent<Mask>();
+        mask.showMaskGraphic = false; // Sembunyikan gambar masker aslinya
 
-        // Membuat Panel Tombol
-        var btnRect = Panel(holder, name + "Btn", new Vector2(160, 100), baseColor);
-        Stretch(btnRect); // Memenuhi holder
+        // 2. Background di dalam mask
+        var bgImg = Img(container, "Background", baseColor);
+        Stretch(bgImg.rectTransform);
+        
+        // 3. Outline (Garis tepi) di dalam mask
+        var outline = bgImg.gameObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0.2f, 0.6f, 1f, 0.6f);
+        outline.effectDistance = new Vector2(2, 2);
 
-        // TRIK MIRING: Tambahkan panel kecil yang dirotasi untuk menutupi sudut
-        var bevelCover = Img(holder, "BevelCover_KiriAtas", new Color(0.01f, 0.03f, 0.09f, 1f)); // Warna background
-        bevelCover.rectTransform.pivot = new Vector2(0, 1);
-        bevelCover.rectTransform.anchorMin = bevelCover.rectTransform.anchorMax = new Vector2(0, 1);
-        bevelCover.rectTransform.anchoredPosition = new Vector2(-20, 20); // Geser keluar
-        bevelCover.rectTransform.sizeDelta = new Vector2(50, 50);
-        bevelCover.rectTransform.localRotation = Quaternion.Euler(0, 0, 45); // Putar 45 derajat
+        // 4. TRIK CHAMFER: Potong ujung kiri-atas dan kanan-bawah menggunakan kotak rotasi
+        // Potongan Kiri Atas
+        var cutTL = Img(container, "CutTopLeft", new Color(0,0,0,0)); // Warna transparan agar bolong
+        cutTL.rectTransform.pivot = new Vector2(0, 1);
+        cutTL.rectTransform.anchorMin = cutTL.rectTransform.anchorMax = new Vector2(0, 1);
+        cutTL.rectTransform.anchoredPosition = new Vector2(0, 0);
+        cutTL.rectTransform.sizeDelta = new Vector2(60, 60);
+        cutTL.rectTransform.localRotation = Quaternion.Euler(0, 0, 45);
 
-        var bevelCover2 = Img(holder, "BevelCover_KananBawah", new Color(0.01f, 0.03f, 0.09f, 1f));
-        bevelCover2.rectTransform.pivot = new Vector2(1, 0);
-        bevelCover2.rectTransform.anchorMin = bevelCover2.rectTransform.anchorMax = new Vector2(1, 0);
-        bevelCover2.rectTransform.anchoredPosition = new Vector2(20, -20);
-        bevelCover2.rectTransform.sizeDelta = new Vector2(50, 50);
-        bevelCover2.rectTransform.localRotation = Quaternion.Euler(0, 0, 45);
+        // Potongan Kanan Bawah
+        var cutBR = Img(container, "CutBottomRight", new Color(0,0,0,0));
+        cutBR.rectTransform.pivot = new Vector2(1, 0);
+        cutBR.rectTransform.anchorMin = cutBR.rectTransform.anchorMax = new Vector2(1, 0);
+        cutBR.rectTransform.anchoredPosition = new Vector2(0, 0);
+        cutBR.rectTransform.sizeDelta = new Vector2(60, 60);
+        cutBR.rectTransform.localRotation = Quaternion.Euler(0, 0, 45);
 
-        // Garis Aksen Biru
-        var line = Img(holder, "AccentLine", isActive ? CyanGlow : new Color(0.2f, 0.5f, 1f, 0.5f));
+        // 5. Garis Aksen & Ikon & Teks (Diletakkan di dalam container)
+        var line = Img(container, "AccentLine", isActive ? CyanGlow : new Color(0.2f, 0.5f, 1f, 0.5f));
         Place(line.rectTransform, new Vector2(0.5f, 1), new Vector2(0, 0), new Vector2(120, 4));
 
-        // Ikon
-        var icon = Img(holder, "Icon", isActive ? Color.white : CyanGlow);
+        var icon = Img(container, "Icon", isActive ? Color.white : CyanGlow);
         Place(icon.rectTransform, new Vector2(0.5f, 1), new Vector2(0, -20), new Vector2(36, 36));
 
-        // Teks
-        Label(holder, "Title", title, 18, FontStyles.Bold, Color.white, TextAlignmentOptions.Center, new Vector2(0.5f, 0), new Vector2(0, 35), new Vector2(160, 24));
-        Label(holder, "Sub", sub, 14, FontStyles.Normal, CyanGlow, TextAlignmentOptions.Center, new Vector2(0.5f, 0), new Vector2(0, 15), new Vector2(160, 20));
+        Label(container, "Title", title, 18, FontStyles.Bold, Color.white, TextAlignmentOptions.Center, new Vector2(0.5f, 0), new Vector2(0, 35), new Vector2(160, 24));
+        Label(container, "Sub", sub, 14, FontStyles.Normal, CyanGlow, TextAlignmentOptions.Center, new Vector2(0.5f, 0), new Vector2(0, 15), new Vector2(160, 20));
 
         if (hasBadge)
         {
-            var dot = Img(holder, "Badge", RedBadge);
+            var dot = Img(container, "Badge", RedBadge);
             Place(dot.rectTransform, new Vector2(0.8f, 1), new Vector2(0, -5), new Vector2(18, 18));
         }
+
+        // Tambahkan Button di paling atas agar bisa diklik
+        var btn = container.gameObject.AddComponent<Button>();
+        btn.targetGraphic = bgImg;
     }
 
     // =====================================================================
-    //  TOMBOL DEPLOY (KANAN BAWAH - POSISI DIPERBAIKI)
+    //  TOMBOL DEPLOY (KANAN BAWAH - DINAIKKAN)
     // =====================================================================
     static void BuildDeploy(Transform root)
     {
-        // Diposisikan mentok kanan bawah, ukuran lebih besar
+        // Deploy dinaikkan Y-nya dari 30 menjadi 50
         var d = Panel(root, "DeployButton", new Vector2(400, 110), new Color(0.1f, 0.4f, 0.9f));
-        Place(d, new Vector2(1, 0), new Vector2(-30, 30), new Vector2(400, 110));
+        Place(d, new Vector2(1, 0), new Vector2(-30, 50), new Vector2(400, 110));
         
         var topLine = Img(d, "TopLine", CyanGlow);
         Place(topLine.rectTransform, new Vector2(0.5f, 1), new Vector2(0, 0), new Vector2(400, 4));
